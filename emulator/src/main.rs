@@ -2,6 +2,7 @@ mod addressing;
 mod bus;
 mod empty_device;
 mod memory;
+mod cpu;
 
 
 fn main() {
