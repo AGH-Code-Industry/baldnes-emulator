@@ -4,8 +4,7 @@ pub struct CPU {
     bus: Bus,
     registers: Registers,
     state: CPUState,
-    fetching_instruction: MicroInstructionSequence,
-    decoded_instruction: Option<MicroInstructionSequence>,
+    fetching_operation: MicroInstructionSequence,
     current_micro_instruction: Option<MicroInstruction>,
 }
 
@@ -16,10 +15,17 @@ pub struct Registers {
     pub program_counter: u16,
     pub stack_ptr: u8,
     pub status: u8,
-    pub instruction: u8,
+    pub operation: u8,
+    pub adl: u8,
+    pub adh: u8,
+    pub bal: u8,
+    pub bah: u8,
+    pub decoded_addressing_mode: Option<MicroInstructionSequence>,
+    pub decoded_operation: Option<MicroInstructionSequence>,
+    pub memory_buffer: u8,
 }
 
-struct MicroInstructionSequence {
+pub struct MicroInstructionSequence {
     sequence: Vec<MicroInstruction>,
     idx: usize,
 }
@@ -37,8 +43,17 @@ enum CPUFlag {
 
 #[derive(Clone)]
 enum MicroInstruction {
-    ReadInstructionCode,
-    DecodeInstruction,
+    ReadOperationCode,
+    DecodeOperation,
+    ImmediateRead,
+    ReadAdl,
+    ReadAdh,
+    ReadZeroPage,
+    ReadAbsolute,
+    ReadBal,
+    ReadBah,
+    ReadAdlIndirectBal,
+    ReadAdhIndirectBal,
 }
 
 enum CPUState {
@@ -55,19 +70,97 @@ impl Registers {
             program_counter: 0x0000,
             stack_ptr: 0x00,
             status: 0x00,
-            instruction: 0x00,
+            operation: 0x00,
+            adl: 0x00,
+            adh: 0x00,
+            bal: 0x00,
+            bah: 0x00,
+            decoded_addressing_mode: None,
+            decoded_operation: None,
+            memory_buffer: 0x00,
         }
     }
 
-    fn read_instruction_code(&mut self, bus: &Bus) {
-        self.instruction = bus.read(self.program_counter as usize);
+    fn get_operation(&mut self) -> &mut Option<MicroInstructionSequence> {
+        if let None = self.decoded_operation {
+            return &mut self.decoded_operation;
+        }
+        if let Some(ref mut decoded_addressing_mode) = self.decoded_addressing_mode {
+            if decoded_addressing_mode.is_completed() {
+                return &mut self.decoded_operation;
+            }
+        }
+        &mut self.decoded_addressing_mode
     }
 
-    fn decode_instruction(&mut self, bus: &Bus) {
-        let instruction_code = self.instruction;
-        println!("Instruction code: {:#X}", instruction_code);
+    fn set_flag(&mut self, flag: CPUFlag) {
+        self.status |= flag.value();
+    }
+
+    fn clear_flag(&mut self, flag: CPUFlag) {
+        self.status &= !flag.value();
+    }
+
+    fn is_flag_set(&self, flag: CPUFlag) -> bool {
+        self.status & flag.value() != 0
+    }
+
+    fn reset_flags(&mut self) {
+        self.status = 0x00;
+    }
+
+    fn step_program_counter(&mut self) {
+        self.program_counter += 1;
+    }
+
+    fn read_operation_code(&mut self, bus: &Bus) {
+        self.operation = bus.read(self.program_counter as usize);
+    }
+
+    fn decode_operation(&mut self, bus: &Bus) {
+        let operation_code = self.operation;
+        println!("Operation code: {:#X}", operation_code);
 
         // TODO: Implement instruction decoding
+    }
+
+    fn immediate_read(&mut self, bus: &Bus) {
+        self.memory_buffer = bus.read(self.program_counter as usize);
+    }
+
+    fn read_adl(&mut self, bus: &Bus) {
+        self.adl = bus.read(self.program_counter as usize);
+    }
+
+    fn read_adh(&mut self, bus: &Bus) {
+        self.adh = bus.read(self.program_counter as usize);
+    }
+
+    fn read_zero_page(&mut self, bus: &Bus) {
+        self.memory_buffer = bus.read(self.adl as usize);
+    }
+
+    fn read_absolute(&mut self, bus: &Bus) {
+        let address = (self.adh as u16) << 8 | self.adl as u16;
+        self.memory_buffer = bus.read(address as usize);
+    }
+
+    fn read_bal(&mut self, bus: &Bus) {
+        self.bal = bus.read(self.program_counter as usize);
+    }
+
+    fn read_bah(&mut self, bus: &Bus) {
+        self.bah = bus.read(self.program_counter as usize);
+    }
+
+    fn read_adl_indirect_bal(&mut self, bus: &Bus) {
+        let address = (self.bal + self.x) as usize;
+        self.adl = bus.read(address);
+    }
+
+    fn read_adh_indirect_bal(&mut self, bus: &Bus) {
+        let address = (self.bal + self.x + 1) as usize;
+        self.adh = bus.read(address);
     }
 }
 
@@ -75,56 +168,55 @@ impl CPU {
     fn new(bus: Bus) -> Self {
         let registers = Registers::new();
         let state = CPUState::Fetching;
-        let fetching_instruction = MicroInstructionSequence::new(vec![
-            MicroInstruction::ReadInstructionCode,
-            MicroInstruction::DecodeInstruction,
+        let fetching_operations = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadOperationCode,
+            MicroInstruction::DecodeOperation,
         ]);
 
         Self {
             bus,
             registers,
             state,
-            fetching_instruction,
-            decoded_instruction: None,
+            fetching_operation: fetching_operations,
             current_micro_instruction: None,
         }
     }
-    fn micro_cycle(&mut self) {
+
+    fn step(&mut self) {
         match self.state {
             CPUState::Fetching => {
-                self.fetch_cycle();
+                self.fetch_step();
             }
             CPUState::Execution => {
-                self.execute_cycle();
+                self.execute_step();
             }
         }
 
         let current_micro_instruction = self.current_micro_instruction.clone();
         if let Some(micro_instruction) = current_micro_instruction {
-            self.execute_instruction(&micro_instruction);
+            self.execute_micro_instruction(&micro_instruction);
         }
     }
 
-    fn fetch_cycle(&mut self) {
-        let micro_instruction = self.fetching_instruction.get_micro_instruction().clone();
+    fn fetch_step(&mut self) {
+        let micro_instruction = self.fetching_operation.get_micro_instruction().clone();
         self.current_micro_instruction = Some(micro_instruction);
-        self.fetching_instruction.next();
+        self.fetching_operation.next();
 
-        if self.fetching_instruction.is_completed() {
-            self.fetching_instruction.reset();
+        if self.fetching_operation.is_completed() {
+            self.fetching_operation.reset();
             self.state = CPUState::Execution;
         }
     }
 
-    fn execute_cycle(&mut self) {
-        match self.decoded_instruction {
-            Some(ref mut instruction) => {
-                let micro_instruction = instruction.get_micro_instruction().clone();
+    fn execute_step(&mut self) {
+        match self.registers.get_operation() {
+            Some(ref mut operation) => {
+                let micro_instruction = operation.get_micro_instruction().clone();
                 self.current_micro_instruction = Some(micro_instruction);
-                instruction.next();
+                operation.next();
 
-                if instruction.is_completed() {
-                    instruction.reset();
+                if operation.is_completed() {
                     self.state = CPUState::Fetching;
                 }
             }
@@ -134,12 +226,19 @@ impl CPU {
         }
     }
 
-    fn execute_instruction(&mut self, micro_instruction: &MicroInstruction) {
+    fn execute_micro_instruction(&mut self, micro_instruction: &MicroInstruction) {
         match micro_instruction {
-            MicroInstruction::ReadInstructionCode => {
-                self.registers.read_instruction_code(&self.bus)
-            }
-            MicroInstruction::DecodeInstruction => self.registers.decode_instruction(&self.bus),
+            MicroInstruction::ReadOperationCode => self.registers.read_operation_code(&self.bus),
+            MicroInstruction::DecodeOperation => self.registers.decode_operation(&self.bus),
+            MicroInstruction::ImmediateRead => self.registers.immediate_read(&self.bus),
+            MicroInstruction::ReadAdh => self.registers.read_adh(&self.bus),
+            MicroInstruction::ReadAdl => self.registers.read_adl(&self.bus),
+            MicroInstruction::ReadZeroPage => self.registers.read_zero_page(&self.bus),
+            MicroInstruction::ReadAbsolute => self.registers.read_absolute(&self.bus),
+            MicroInstruction::ReadBal => self.registers.read_bal(&self.bus),
+            MicroInstruction::ReadBah => self.registers.read_bah(&self.bus),
+            MicroInstruction::ReadAdlIndirectBal => self.registers.read_adl_indirect_bal(&self.bus),
+            MicroInstruction::ReadAdhIndirectBal => self.registers.read_adh_indirect_bal(&self.bus),
         }
     }
 }
