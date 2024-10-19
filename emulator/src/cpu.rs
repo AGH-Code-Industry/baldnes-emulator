@@ -9,20 +9,20 @@ pub struct CPU {
 }
 
 pub struct Registers {
-    pub x: u8,
-    pub y: u8,
-    pub a: u8,
-    pub program_counter: u16,
-    pub stack_ptr: u8,
-    pub status: u8,
-    pub operation: u8,
-    pub adl: u8,
-    pub adh: u8,
-    pub bal: u8,
-    pub bah: u8,
-    pub decoded_addressing_mode: Option<MicroInstructionSequence>,
-    pub decoded_operation: Option<MicroInstructionSequence>,
-    pub memory_buffer: u8,
+    x: u8,
+    y: u8,
+    a: u8,
+    program_counter: u16,
+    stack_ptr: u8,
+    status: u8,
+    operation: u8,
+    adl: u8,
+    adh: u8,
+    bal: u8,
+    bah: u8,
+    decoded_addressing_mode: Option<MicroInstructionSequence>,
+    decoded_operation: Option<MicroInstructionSequence>,
+    memory_buffer: u8,
 }
 
 pub struct MicroInstructionSequence {
@@ -43,6 +43,7 @@ enum CPUFlag {
 
 #[derive(Clone)]
 enum MicroInstruction {
+    Empty,
     ReadOperationCode,
     DecodeOperation,
     ImmediateRead,
@@ -54,11 +55,99 @@ enum MicroInstruction {
     ReadBah,
     ReadAdlIndirectBal,
     ReadAdhIndirectBal,
+    ReadZeroPageBalX,
+
+    WriteZeroPage,
+    WriteAbsolute,
+    WriteZeroPageBalX,
+
+    ShiftLeftAccumulator,
+    ShiftLeftMemoryBuffer,
 }
 
 enum CPUState {
     Fetching,
     Execution,
+}
+
+enum Operation {
+    AslA,
+    AslZeroPage,
+    AslZeroPageX,
+    AslAbsolute,
+}
+
+struct OperationMicroInstructions {
+    pub addressing_sequence: Option<MicroInstructionSequence>,
+    pub operation_sequence: MicroInstructionSequence
+}
+
+impl Operation {
+    fn get_micro_instructions(&self) -> OperationMicroInstructions {
+        let zero_page_addressing = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadAdl,
+            MicroInstruction::ReadZeroPage
+        ]);
+        let zero_page_x_addressing = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadBal,
+            MicroInstruction::Empty, // Because we can add it in the next step easily
+            MicroInstruction::ReadZeroPageBalX
+        ]);
+        let absolute_addressing = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadAdl,
+            MicroInstruction::ReadAdh,
+            MicroInstruction::ReadAbsolute
+        ]);
+
+        match self {
+            Self::AslA => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ShiftLeftAccumulator
+                ])
+            },
+            Self::AslZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ShiftLeftMemoryBuffer,
+                    MicroInstruction::WriteZeroPage
+                ])
+            },
+            Self::AslZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ShiftLeftMemoryBuffer,
+                    MicroInstruction::WriteZeroPageBalX
+                ])
+            },
+            Self::AslAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ShiftLeftMemoryBuffer,
+                    MicroInstruction::WriteAbsolute
+                ])
+            },
+        }
+    }
+
+    fn get_opcode(&self) -> u8 {
+        match self {
+            Self::AslA => 0x0A,
+            Self::AslZeroPage => 0x06,
+            Self::AslZeroPageX => 0x16,
+            Self::AslAbsolute => 0x0E,
+        }
+    }
+
+    fn get_operation(opcode: u8) -> Option<Self> {
+        match opcode {
+            0x0A => Some(Self::AslA),
+            0x06 => Some(Self::AslZeroPage),
+            0x16 => Some(Self::AslZeroPageX),
+            0x0E => Some(Self::AslAbsolute),
+            _ => None,
+        }
+    }
 }
 
 impl Registers {
@@ -82,14 +171,17 @@ impl Registers {
     }
 
     fn get_operation(&mut self) -> &mut Option<MicroInstructionSequence> {
-        if let None = self.decoded_operation {
-            return &mut self.decoded_operation;
-        }
-        if let Some(ref mut decoded_addressing_mode) = self.decoded_addressing_mode {
-            if decoded_addressing_mode.is_completed() {
+        match self.decoded_operation {
+            Some(ref mut decoded_addressing_mode) => {
+                if decoded_addressing_mode.is_completed() {
+                    return &mut self.decoded_operation;
+                }
+            }
+            None => {
                 return &mut self.decoded_operation;
             }
         }
+        
         &mut self.decoded_addressing_mode
     }
 
@@ -99,6 +191,14 @@ impl Registers {
 
     fn clear_flag(&mut self, flag: CPUFlag) {
         self.status &= !flag.value();
+    }
+
+    fn set_flag_value(&mut self, flag: CPUFlag, value: bool) {
+        if value {
+            self.set_flag(flag);
+        } else {
+            self.clear_flag(flag);
+        }
     }
 
     fn is_flag_set(&self, flag: CPUFlag) -> bool {
@@ -121,19 +221,30 @@ impl Registers {
         let operation_code = self.operation;
         println!("Operation code: {:#X}", operation_code);
 
-        // TODO: Implement instruction decoding
+        if let Some(operation) = Operation::get_operation(operation_code) {
+            let micro_instructions = operation.get_micro_instructions();
+            self.decoded_addressing_mode = micro_instructions.addressing_sequence;
+            self.decoded_operation = Some(micro_instructions.operation_sequence);
+        } else {
+            panic!("Operation not found for opcode: {:#X}", operation_code);
+        }
+
+        self.step_program_counter();
     }
 
     fn immediate_read(&mut self, bus: &Bus) {
         self.memory_buffer = bus.read(self.program_counter as usize);
+        self.step_program_counter();
     }
 
     fn read_adl(&mut self, bus: &Bus) {
         self.adl = bus.read(self.program_counter as usize);
+        self.step_program_counter();
     }
 
     fn read_adh(&mut self, bus: &Bus) {
         self.adh = bus.read(self.program_counter as usize);
+        self.step_program_counter();
     }
 
     fn read_zero_page(&mut self, bus: &Bus) {
@@ -147,10 +258,12 @@ impl Registers {
 
     fn read_bal(&mut self, bus: &Bus) {
         self.bal = bus.read(self.program_counter as usize);
+        self.step_program_counter();
     }
 
     fn read_bah(&mut self, bus: &Bus) {
         self.bah = bus.read(self.program_counter as usize);
+        self.step_program_counter();
     }
 
     fn read_adl_indirect_bal(&mut self, bus: &Bus) {
@@ -161,6 +274,47 @@ impl Registers {
     fn read_adh_indirect_bal(&mut self, bus: &Bus) {
         let address = (self.bal + self.x + 1) as usize;
         self.adh = bus.read(address);
+    }
+
+    fn write_zero_page(&mut self, bus: &mut Bus) {
+        bus.write(self.adl as usize, self.memory_buffer);
+    }
+
+    fn write_absolute(&mut self, bus: &mut Bus) {
+        let address = (self.adh as u16) << 8 | self.adl as u16;
+        bus.write(address as usize, self.memory_buffer);
+    }
+
+    fn read_zero_page_bal_x(&mut self, bus: &Bus) {
+        // TODO: Be careful with overflow, check if it's correct
+
+        let address = (self.bal + self.x) as usize;
+        self.memory_buffer = bus.read(address);
+    }
+
+    fn write_zero_page_bal_x(&mut self, bus: &mut Bus) {
+        let address = (self.bal + self.x) as usize;
+        bus.write(address, self.memory_buffer);
+    }
+
+    fn shift_left_accumulator(&mut self) {
+        let is_carry = self.a & 0x80 != 0;
+        self.a <<= 1;
+        let is_negative = self.a & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::CarryBit, is_carry);
+        self.set_flag_value(CPUFlag::Zero, self.a == 0);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    fn shift_left_memory_buffer(&mut self) {
+        let is_carry = self.memory_buffer & 0x80 != 0;
+        self.memory_buffer <<= 1;
+        let is_negative = self.memory_buffer & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::CarryBit, is_carry);
+        self.set_flag_value(CPUFlag::Zero, self.memory_buffer == 0);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
     }
 }
 
@@ -228,6 +382,8 @@ impl CPU {
 
     fn execute_micro_instruction(&mut self, micro_instruction: &MicroInstruction) {
         match micro_instruction {
+            MicroInstruction::Empty => (),
+
             MicroInstruction::ReadOperationCode => self.registers.read_operation_code(&self.bus),
             MicroInstruction::DecodeOperation => self.registers.decode_operation(&self.bus),
             MicroInstruction::ImmediateRead => self.registers.immediate_read(&self.bus),
@@ -239,6 +395,14 @@ impl CPU {
             MicroInstruction::ReadBah => self.registers.read_bah(&self.bus),
             MicroInstruction::ReadAdlIndirectBal => self.registers.read_adl_indirect_bal(&self.bus),
             MicroInstruction::ReadAdhIndirectBal => self.registers.read_adh_indirect_bal(&self.bus),
+            MicroInstruction::ReadZeroPageBalX => self.registers.read_zero_page_bal_x(&self.bus),
+            
+            MicroInstruction::WriteZeroPage => self.registers.write_zero_page(&mut self.bus),
+            MicroInstruction::WriteAbsolute => self.registers.write_absolute(&mut self.bus),
+            MicroInstruction::WriteZeroPageBalX => self.registers.write_zero_page_bal_x(&mut self.bus),
+
+            MicroInstruction::ShiftLeftAccumulator => self.registers.shift_left_accumulator(),
+            MicroInstruction::ShiftLeftMemoryBuffer => self.registers.shift_left_memory_buffer(),
         }
     }
 }
