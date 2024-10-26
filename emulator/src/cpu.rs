@@ -20,6 +20,7 @@ pub struct Registers {
     adh: u8,
     bal: u8,
     bah: u8,
+    ial: u8,
     decoded_addressing_mode: Option<MicroInstructionSequence>,
     decoded_operation: Option<MicroInstructionSequence>,
     memory_buffer: u8,
@@ -46,6 +47,7 @@ enum MicroInstruction {
     Empty,
     ReadOperationCode,
     DecodeOperation,
+
     ImmediateRead,
     ReadAdl,
     ReadAdh,
@@ -56,6 +58,11 @@ enum MicroInstruction {
     ReadAdlIndirectBal,
     ReadAdhIndirectBal,
     ReadZeroPageBalX,
+    ReadAdlAdhAbsoluteX,
+    ReadAdlAdhAbsoluteY,
+    ReadIal,
+    ReadBalIndirectIal,
+    ReadBahIndirectIal,
 
     WriteZeroPage,
     WriteAbsolute,
@@ -97,6 +104,31 @@ impl Operation {
             MicroInstruction::ReadAdl,
             MicroInstruction::ReadAdh,
             MicroInstruction::ReadAbsolute
+        ]);
+        let indirect_x_addressing = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadBal,
+            MicroInstruction::Empty, // Because we can add it in the next step easily
+            MicroInstruction::ReadAdlIndirectBal,
+            MicroInstruction::ReadAdhIndirectBal,
+            MicroInstruction::ReadAbsolute
+        ]);
+        let absolute_x_addressing = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadBal,
+            MicroInstruction::ReadBah,
+            MicroInstruction::ReadAdlAdhAbsoluteX,
+            // TODO: Check if this is correct (T4 is optional if page boundary is not crossed)
+        ]);
+        let absolute_y_addressing = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadBal,
+            MicroInstruction::ReadBah,
+            MicroInstruction::ReadAdlAdhAbsoluteY,
+        ]);
+        let indirect_y_addressing = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadIal,
+            MicroInstruction::ReadBalIndirectIal,
+            MicroInstruction::ReadBahIndirectIal,
+            MicroInstruction::ReadAdlAdhAbsoluteY,
+            // TODO: Same as absolute_x_addressing
         ]);
 
         match self {
@@ -164,6 +196,7 @@ impl Registers {
             adh: 0x00,
             bal: 0x00,
             bah: 0x00,
+            ial: 0x00,
             decoded_addressing_mode: None,
             decoded_operation: None,
             memory_buffer: 0x00,
@@ -297,6 +330,34 @@ impl Registers {
         bus.write(address, self.memory_buffer);
     }
 
+    fn read_adl_adh_absolute_index_register(&mut self, bus: &Bus, index_register: u8) {
+        let bal_address = self.bal as usize;
+        let bah_address = self.bah as usize;
+        let address = ((bah_address << 8) | bal_address) + (index_register as usize);
+        self.memory_buffer = bus.read(address);
+    }
+
+    fn read_adl_adh_absolute_x(&mut self, bus: &Bus) {
+        self.read_adl_adh_absolute_index_register(bus, self.x);
+    }
+
+    fn read_adl_adh_absolute_y(&mut self, bus: &Bus) {
+        self.read_adl_adh_absolute_index_register(bus, self.y);
+    }
+
+    fn read_ial(&mut self, bus: &Bus) {
+        self.ial = bus.read(self.program_counter as usize);
+        self.step_program_counter();
+    }
+
+    fn read_bal_indirect_ial(&mut self, bus: &Bus) {
+        self.bal = bus.read(self.ial as usize);
+    }
+
+    fn read_bah_indirect_ial(&mut self, bus: &Bus) {
+        self.bah = bus.read(self.ial as usize + 1);
+    }
+
     fn shift_left_accumulator(&mut self) {
         let is_carry = self.a & 0x80 != 0;
         self.a <<= 1;
@@ -396,7 +457,12 @@ impl CPU {
             MicroInstruction::ReadAdlIndirectBal => self.registers.read_adl_indirect_bal(&self.bus),
             MicroInstruction::ReadAdhIndirectBal => self.registers.read_adh_indirect_bal(&self.bus),
             MicroInstruction::ReadZeroPageBalX => self.registers.read_zero_page_bal_x(&self.bus),
-            
+            MicroInstruction::ReadAdlAdhAbsoluteX => self.registers.read_adl_adh_absolute_x(&self.bus),
+            MicroInstruction::ReadAdlAdhAbsoluteY => self.registers.read_adl_adh_absolute_y(&self.bus),
+            MicroInstruction::ReadIal => self.registers.read_ial(&self.bus),
+            MicroInstruction::ReadBalIndirectIal => self.registers.read_bal_indirect_ial(&self.bus),
+            MicroInstruction::ReadBahIndirectIal => self.registers.read_bah_indirect_ial(&self.bus),
+
             MicroInstruction::WriteZeroPage => self.registers.write_zero_page(&mut self.bus),
             MicroInstruction::WriteAbsolute => self.registers.write_absolute(&mut self.bus),
             MicroInstruction::WriteZeroPageBalX => self.registers.write_zero_page_bal_x(&mut self.bus),
