@@ -6,7 +6,7 @@ pub struct CPU {
     state: CPUState,
     fetching_instruction: MicroInstructionSequence,
     decoded_instruction: Option<MicroInstructionSequence>,
-    current_micro_instruction: Option<MicroInstruction>
+    current_micro_instruction: Option<MicroInstruction>,
 }
 
 pub struct Registers {
@@ -16,7 +16,7 @@ pub struct Registers {
     pub program_counter: u16,
     pub stack_ptr: u8,
     pub status: u8,
-    pub instruction: u8
+    pub instruction: u8,
 }
 
 struct MicroInstructionSequence {
@@ -32,18 +32,18 @@ enum CPUFlag {
     Break,
     Unused,
     Overflow,
-    Negative
+    Negative,
 }
 
 #[derive(Clone)]
 enum MicroInstruction {
     ReadInstructionCode,
-    DecodeInstruction
+    DecodeInstruction,
 }
 
 enum CPUState {
     Fetching,
-    Execution
+    Execution,
 }
 
 impl Registers {
@@ -55,12 +55,12 @@ impl Registers {
             program_counter: 0x0000,
             stack_ptr: 0x00,
             status: 0x00,
-            instruction: 0x00
+            instruction: 0x00,
         }
     }
-    
-    fn read_instruction_code(&mut self, bus: &Bus) {
-        self.instruction = bus.read(self.program_counter as usize);
+
+    fn read_instruction_code(&mut self, bus: &mut Bus) {
+        self.instruction = bus.read(self.program_counter);
     }
 
     fn decode_instruction(&mut self, bus: &Bus) {
@@ -75,10 +75,10 @@ impl CPU {
     fn new(bus: Bus) -> Self {
         let registers = Registers::new();
         let state = CPUState::Fetching;
-        let fetching_instruction = MicroInstructionSequence::new(
-            vec![MicroInstruction::ReadInstructionCode,
-                          MicroInstruction::DecodeInstruction]
-        );
+        let fetching_instruction = MicroInstructionSequence::new(vec![
+            MicroInstruction::ReadInstructionCode,
+            MicroInstruction::DecodeInstruction,
+        ]);
 
         Self {
             bus,
@@ -86,14 +86,14 @@ impl CPU {
             state,
             fetching_instruction,
             decoded_instruction: None,
-            current_micro_instruction: None
+            current_micro_instruction: None,
         }
     }
     fn micro_cycle(&mut self) {
         match self.state {
             CPUState::Fetching => {
                 self.fetch_cycle();
-            },
+            }
             CPUState::Execution => {
                 self.execute_cycle();
             }
@@ -106,8 +106,7 @@ impl CPU {
     }
 
     fn fetch_cycle(&mut self) {
-        let micro_instruction =
-            self.fetching_instruction.get_micro_instruction().clone();
+        let micro_instruction = self.fetching_instruction.get_micro_instruction().clone();
         self.current_micro_instruction = Some(micro_instruction);
         self.fetching_instruction.next();
 
@@ -128,27 +127,26 @@ impl CPU {
                     instruction.reset();
                     self.state = CPUState::Fetching;
                 }
-            },
-            None => {panic!("No instruction to execute.")}
+            }
+            None => {
+                panic!("No instruction to execute.")
+            }
         }
     }
 
     fn execute_instruction(&mut self, micro_instruction: &MicroInstruction) {
         match micro_instruction {
-            MicroInstruction::ReadInstructionCode =>
-                {self.registers.read_instruction_code(& self.bus)},
-            MicroInstruction::DecodeInstruction =>
-                {self.registers.decode_instruction(& self.bus)}
+            MicroInstruction::ReadInstructionCode => {
+                self.registers.read_instruction_code(&mut self.bus)
+            }
+            MicroInstruction::DecodeInstruction => self.registers.decode_instruction(&self.bus),
         }
     }
 }
 
 impl MicroInstructionSequence {
     fn new(sequence: Vec<MicroInstruction>) -> Self {
-        Self {
-            sequence,
-            idx: 0
-        }
+        Self { sequence, idx: 0 }
     }
 
     fn get_micro_instruction(&self) -> &MicroInstruction {
@@ -158,7 +156,7 @@ impl MicroInstructionSequence {
     fn next(&mut self) {
         self.idx += 1;
     }
-    
+
     fn is_completed(&self) -> bool {
         self.idx >= self.sequence.len()
     }
@@ -166,7 +164,6 @@ impl MicroInstructionSequence {
     fn reset(&mut self) {
         self.idx = 0;
     }
-
 }
 impl CPUFlag {
     fn value(&self) -> u8 {
@@ -179,7 +176,6 @@ impl CPUFlag {
             Self::Unused => 1 << 5,
             Self::Overflow => 1 << 6,
             Self::Negative => 1 << 7,
-
         }
     }
 }
