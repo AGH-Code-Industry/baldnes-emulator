@@ -2,8 +2,9 @@ use byteorder::ReadBytesExt;
 use std::fs::File;
 use std::io::{Read, Seek, SeekFrom, BufReader};
 use std::path::Path;
+use crate::chr_rom::ChrRom;
 
-const NES_FILE_MAGIC_BYES: [u8; 4] = ['N' as u8, 'E' as u8, 'S' as u8, 0x1A];
+const NES_FILE_MAGIC_BYTES: [u8; 4] = ['N' as u8, 'E' as u8, 'S' as u8, 0x1A];
 const PRG_UNIT_SIZE: u16 = 16;
 const CHR_UNIT_SIZE: u16 = 8;
 
@@ -63,7 +64,7 @@ pub struct Ines {
     header: InesHeader,
     trainer: Option<[u8; 512]>,
     prg_rom: Vec<u8>,
-    chr_rom: Option<Vec<u8>>,
+    chr_rom: Option<ChrRom>,
     mapper: u8,
     play_choice_inst_rom: Option<Vec<u8>>,
     play_choice_10: Option<Vec<u8>>,
@@ -88,7 +89,7 @@ impl Ines {
         let mut header = [0; 16];
         file.read_exact(&mut header)?;
 
-        if header[0..4] != NES_FILE_MAGIC_BYES {
+        if header[0..4] != NES_FILE_MAGIC_BYTES {
             return Err(NesRomReadError::MissingMagicBytes.into());
         }
 
@@ -127,7 +128,7 @@ impl Ines {
 
         let prg_rom = Ines::read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?;
         let chr_rom = if header.chr_rom_size != 0 {
-            Some(Ines::read_banks(&mut file, header.chr_rom_size, CHR_UNIT_SIZE)?)
+            Some(ChrRom::new_with_data(Ines::read_banks(&mut file, header.chr_rom_size, CHR_UNIT_SIZE)?))
         } else {
             None
         };
