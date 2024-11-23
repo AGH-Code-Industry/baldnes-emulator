@@ -1,7 +1,7 @@
-use crate::bus::Bus;
+use crate::bus::{Bus, BusLike};
 
-pub struct CPU {
-    bus: Bus,
+pub struct CPU<T: BusLike> {
+    bus: T,
     registers: Registers,
     state: CPUState,
     fetching_operation: MicroInstructionSequence,
@@ -31,6 +31,7 @@ pub struct MicroInstructionSequence {
     idx: usize,
 }
 
+#[derive(Clone, PartialEq, Debug)]
 enum CPUFlag {
     CarryBit,
     Zero,
@@ -42,7 +43,7 @@ enum CPUFlag {
     Negative,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Debug)]
 enum MicroInstruction {
     Empty,
     ReadOperationCode,
@@ -72,11 +73,13 @@ enum MicroInstruction {
     ShiftLeftMemoryBuffer,
 }
 
+#[derive(PartialEq, Debug)]
 enum CPUState {
     Fetching,
     Execution,
 }
 
+#[derive(PartialEq, Debug)]
 enum Operation {
     AslA,
     AslZeroPage,
@@ -86,31 +89,31 @@ enum Operation {
 
 struct OperationMicroInstructions {
     pub addressing_sequence: Option<MicroInstructionSequence>,
-    pub operation_sequence: MicroInstructionSequence
+    pub operation_sequence: MicroInstructionSequence,
 }
 
 impl Operation {
     fn get_micro_instructions(&self) -> OperationMicroInstructions {
         let zero_page_addressing = MicroInstructionSequence::new(vec![
             MicroInstruction::ReadAdl,
-            MicroInstruction::ReadZeroPage
+            MicroInstruction::ReadZeroPage,
         ]);
         let zero_page_x_addressing = MicroInstructionSequence::new(vec![
             MicroInstruction::ReadBal,
             MicroInstruction::Empty, // Because we can add it in the next step easily
-            MicroInstruction::ReadZeroPageBalX
+            MicroInstruction::ReadZeroPageBalX,
         ]);
         let absolute_addressing = MicroInstructionSequence::new(vec![
             MicroInstruction::ReadAdl,
             MicroInstruction::ReadAdh,
-            MicroInstruction::ReadAbsolute
+            MicroInstruction::ReadAbsolute,
         ]);
         let indirect_x_addressing = MicroInstructionSequence::new(vec![
             MicroInstruction::ReadBal,
             MicroInstruction::Empty, // Because we can add it in the next step easily
             MicroInstruction::ReadAdlIndirectBal,
             MicroInstruction::ReadAdhIndirectBal,
-            MicroInstruction::ReadAbsolute
+            MicroInstruction::ReadAbsolute,
         ]);
         let absolute_x_addressing = MicroInstructionSequence::new(vec![
             MicroInstruction::ReadBal,
@@ -135,29 +138,29 @@ impl Operation {
             Self::AslA => OperationMicroInstructions {
                 addressing_sequence: None,
                 operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::ShiftLeftAccumulator
-                ])
+                    MicroInstruction::ShiftLeftAccumulator,
+                ]),
             },
             Self::AslZeroPage => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
-                    MicroInstruction::WriteZeroPage
-                ])
+                    MicroInstruction::WriteZeroPage,
+                ]),
             },
             Self::AslZeroPageX => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_x_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
-                    MicroInstruction::WriteZeroPageBalX
-                ])
+                    MicroInstruction::WriteZeroPageBalX,
+                ]),
             },
             Self::AslAbsolute => OperationMicroInstructions {
                 addressing_sequence: Some(absolute_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
-                    MicroInstruction::WriteAbsolute
-                ])
+                    MicroInstruction::WriteAbsolute,
+                ]),
             },
         }
     }
@@ -204,18 +207,23 @@ impl Registers {
     }
 
     fn get_operation(&mut self) -> &mut Option<MicroInstructionSequence> {
-        match self.decoded_operation {
+        match self.decoded_addressing_mode {
             Some(ref mut decoded_addressing_mode) => {
                 if decoded_addressing_mode.is_completed() {
-                    return &mut self.decoded_operation;
+                    &mut self.decoded_operation
+                } else {
+                    &mut self.decoded_addressing_mode
                 }
             }
-            None => {
-                return &mut self.decoded_operation;
-            }
+            None => &mut self.decoded_operation,
         }
-        
-        &mut self.decoded_addressing_mode
+    }
+
+    fn is_operation_completed(&self) -> bool {
+        match &self.decoded_operation {
+            Some(operation) => operation.is_completed(),
+            None => false,
+        }
     }
 
     fn set_flag(&mut self, flag: CPUFlag) {
@@ -246,11 +254,11 @@ impl Registers {
         self.program_counter += 1;
     }
 
-    fn read_operation_code(&mut self, bus: &Bus) {
+    fn read_operation_code<T: BusLike>(&mut self, bus: &T) {
         self.operation = bus.read(self.program_counter as usize);
     }
 
-    fn decode_operation(&mut self, bus: &Bus) {
+    fn decode_operation<T: BusLike>(&mut self, bus: &T) {
         let operation_code = self.operation;
         println!("Operation code: {:#X}", operation_code);
 
@@ -265,96 +273,97 @@ impl Registers {
         self.step_program_counter();
     }
 
-    fn immediate_read(&mut self, bus: &Bus) {
+    fn immediate_read<T: BusLike>(&mut self, bus: &T) {
         self.memory_buffer = bus.read(self.program_counter as usize);
         self.step_program_counter();
     }
 
-    fn read_adl(&mut self, bus: &Bus) {
+    fn read_adl<T: BusLike>(&mut self, bus: &T) {
         self.adl = bus.read(self.program_counter as usize);
         self.step_program_counter();
     }
 
-    fn read_adh(&mut self, bus: &Bus) {
+    fn read_adh<T: BusLike>(&mut self, bus: &T) {
         self.adh = bus.read(self.program_counter as usize);
         self.step_program_counter();
     }
 
-    fn read_zero_page(&mut self, bus: &Bus) {
+    fn read_zero_page<T: BusLike>(&mut self, bus: &T) {
+        println!("Reading zero page address: {:#X}", self.adl);
         self.memory_buffer = bus.read(self.adl as usize);
     }
 
-    fn read_absolute(&mut self, bus: &Bus) {
+    fn read_absolute<T: BusLike>(&mut self, bus: &T) {
         let address = (self.adh as u16) << 8 | self.adl as u16;
         self.memory_buffer = bus.read(address as usize);
     }
 
-    fn read_bal(&mut self, bus: &Bus) {
+    fn read_bal<T: BusLike>(&mut self, bus: &T) {
         self.bal = bus.read(self.program_counter as usize);
         self.step_program_counter();
     }
 
-    fn read_bah(&mut self, bus: &Bus) {
+    fn read_bah<T: BusLike>(&mut self, bus: &T) {
         self.bah = bus.read(self.program_counter as usize);
         self.step_program_counter();
     }
 
-    fn read_adl_indirect_bal(&mut self, bus: &Bus) {
+    fn read_adl_indirect_bal<T: BusLike>(&mut self, bus: &T) {
         let address = (self.bal + self.x) as usize;
         self.adl = bus.read(address);
     }
 
-    fn read_adh_indirect_bal(&mut self, bus: &Bus) {
+    fn read_adh_indirect_bal<T: BusLike>(&mut self, bus: &T) {
         let address = (self.bal + self.x + 1) as usize;
         self.adh = bus.read(address);
     }
 
-    fn write_zero_page(&mut self, bus: &mut Bus) {
+    fn write_zero_page<T: BusLike>(&mut self, bus: &mut T) {
         bus.write(self.adl as usize, self.memory_buffer);
     }
 
-    fn write_absolute(&mut self, bus: &mut Bus) {
+    fn write_absolute<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.adh as u16) << 8 | self.adl as u16;
         bus.write(address as usize, self.memory_buffer);
     }
 
-    fn read_zero_page_bal_x(&mut self, bus: &Bus) {
+    fn read_zero_page_bal_x<T: BusLike>(&mut self, bus: &T) {
         // TODO: Be careful with overflow, check if it's correct
 
         let address = (self.bal + self.x) as usize;
         self.memory_buffer = bus.read(address);
     }
 
-    fn write_zero_page_bal_x(&mut self, bus: &mut Bus) {
+    fn write_zero_page_bal_x<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.bal + self.x) as usize;
         bus.write(address, self.memory_buffer);
     }
 
-    fn read_adl_adh_absolute_index_register(&mut self, bus: &Bus, index_register: u8) {
+    fn read_adl_adh_absolute_index_register<T: BusLike>(&mut self, bus: &T, index_register: u8) {
         let bal_address = self.bal as usize;
         let bah_address = self.bah as usize;
         let address = ((bah_address << 8) | bal_address) + (index_register as usize);
         self.memory_buffer = bus.read(address);
     }
 
-    fn read_adl_adh_absolute_x(&mut self, bus: &Bus) {
+    fn read_adl_adh_absolute_x<T: BusLike>(&mut self, bus: &T) {
         self.read_adl_adh_absolute_index_register(bus, self.x);
     }
 
-    fn read_adl_adh_absolute_y(&mut self, bus: &Bus) {
+    fn read_adl_adh_absolute_y<T: BusLike>(&mut self, bus: &T) {
         self.read_adl_adh_absolute_index_register(bus, self.y);
     }
 
-    fn read_ial(&mut self, bus: &Bus) {
+    fn read_ial<T: BusLike>(&mut self, bus: &T) {
         self.ial = bus.read(self.program_counter as usize);
         self.step_program_counter();
     }
 
-    fn read_bal_indirect_ial(&mut self, bus: &Bus) {
+    fn read_bal_indirect_ial<T: BusLike>(&mut self, bus: &T) {
         self.bal = bus.read(self.ial as usize);
     }
 
-    fn read_bah_indirect_ial(&mut self, bus: &Bus) {
+    fn read_bah_indirect_ial<T: BusLike>(&mut self, bus: &T) {
         self.bah = bus.read(self.ial as usize + 1);
     }
 
@@ -379,8 +388,8 @@ impl Registers {
     }
 }
 
-impl CPU {
-    fn new(bus: Bus) -> Self {
+impl<T: BusLike> CPU<T> {
+    fn new(bus: T) -> Self {
         let registers = Registers::new();
         let state = CPUState::Fetching;
         let fetching_operations = MicroInstructionSequence::new(vec![
@@ -431,7 +440,7 @@ impl CPU {
                 self.current_micro_instruction = Some(micro_instruction);
                 operation.next();
 
-                if operation.is_completed() {
+                if self.registers.is_operation_completed() {
                     self.state = CPUState::Fetching;
                 }
             }
@@ -457,15 +466,21 @@ impl CPU {
             MicroInstruction::ReadAdlIndirectBal => self.registers.read_adl_indirect_bal(&self.bus),
             MicroInstruction::ReadAdhIndirectBal => self.registers.read_adh_indirect_bal(&self.bus),
             MicroInstruction::ReadZeroPageBalX => self.registers.read_zero_page_bal_x(&self.bus),
-            MicroInstruction::ReadAdlAdhAbsoluteX => self.registers.read_adl_adh_absolute_x(&self.bus),
-            MicroInstruction::ReadAdlAdhAbsoluteY => self.registers.read_adl_adh_absolute_y(&self.bus),
+            MicroInstruction::ReadAdlAdhAbsoluteX => {
+                self.registers.read_adl_adh_absolute_x(&self.bus)
+            }
+            MicroInstruction::ReadAdlAdhAbsoluteY => {
+                self.registers.read_adl_adh_absolute_y(&self.bus)
+            }
             MicroInstruction::ReadIal => self.registers.read_ial(&self.bus),
             MicroInstruction::ReadBalIndirectIal => self.registers.read_bal_indirect_ial(&self.bus),
             MicroInstruction::ReadBahIndirectIal => self.registers.read_bah_indirect_ial(&self.bus),
 
             MicroInstruction::WriteZeroPage => self.registers.write_zero_page(&mut self.bus),
             MicroInstruction::WriteAbsolute => self.registers.write_absolute(&mut self.bus),
-            MicroInstruction::WriteZeroPageBalX => self.registers.write_zero_page_bal_x(&mut self.bus),
+            MicroInstruction::WriteZeroPageBalX => {
+                self.registers.write_zero_page_bal_x(&mut self.bus)
+            }
 
             MicroInstruction::ShiftLeftAccumulator => self.registers.shift_left_accumulator(),
             MicroInstruction::ShiftLeftMemoryBuffer => self.registers.shift_left_memory_buffer(),
@@ -506,5 +521,159 @@ impl CPUFlag {
             Self::Overflow => 1 << 6,
             Self::Negative => 1 << 7,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::bus;
+    // Note this useful idiom: importing names from outer (for mod tests) scope.
+    use super::*;
+
+    struct TestBus {
+        memory: Vec<usize>,
+    }
+
+    impl TestBus {
+        pub fn new() -> Self {
+            Self {
+                memory: vec![0; bus::ADDRESS_SPACE],
+            }
+        }
+    }
+
+    impl BusLike for TestBus {
+        fn read(&self, address: usize) -> u8 {
+            self.memory[address] as u8
+        }
+
+        fn write(&mut self, address: usize, data: u8) {
+            println!("Writing {:#X} to address {:#X}", data, address);
+            self.memory[address] = data as usize;
+        }
+    }
+
+    #[test]
+    fn test_cpu_new() {
+        let bus = TestBus::new();
+        let cpu = CPU::new(bus);
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, None);
+    }
+
+    #[test]
+    fn test_cpu_fetch_step() {
+        let bus = TestBus::new();
+        let mut cpu = CPU::new(bus);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadOperationCode)
+        );
+    }
+
+    #[test]
+    fn test_cpu_asl_a() {
+        const OPCODE: u8 = 0x0A;
+        let mut bus = TestBus::new();
+        bus.write(0, OPCODE);
+        let mut cpu = CPU::new(bus);
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.registers.a, 0);
+        assert_eq!(cpu.state, CPUState::Execution);
+
+        cpu.step();
+
+        assert_eq!(cpu.registers.a, 0);
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ShiftLeftAccumulator)
+        );
+    }
+
+    #[test]
+    fn test_cpu_asl_a_not_empty() {
+        const OPCODE: u8 = 0x0A;
+        let mut bus = TestBus::new();
+        bus.write(0, OPCODE);
+        let mut cpu = CPU::new(bus);
+
+        cpu.registers.a = 0b10000000;
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.registers.a, 0b10000000);
+        assert_eq!(cpu.state, CPUState::Execution);
+
+        cpu.step();
+
+        assert_eq!(cpu.registers.a, 0b00000000);
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ShiftLeftAccumulator)
+        );
+    }
+
+    #[test]
+    fn test_cpu_asl_zero_page() {
+        const OPCODE: u8 = 0x06;
+        const ADDRESS: u8 = 0x10;
+        const VALUE: u8 = 0b10;
+        const EXPECTED_VALUE: u8 = 0b100;
+
+        let mut bus = TestBus::new();
+        bus.write(0, OPCODE);
+        bus.write(1, ADDRESS);
+        bus.write(ADDRESS as usize, VALUE);
+
+        let mut cpu = CPU::new(bus);
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadAdl)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadZeroPage)
+        );
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPage)
+        );
+
+        let read_value = cpu.bus.read(ADDRESS as usize);
+
+        assert_eq!(read_value, EXPECTED_VALUE);
     }
 }
