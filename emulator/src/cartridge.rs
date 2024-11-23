@@ -10,7 +10,7 @@ pub struct Cartridge {
     misc_area: Vec<u8>,
 }
 
-const NES_FILE_MAGIC_BYES: [u8; 4] = ['N' as u8, 'E' as u8, 'S' as u8, 0x1A];
+const NES_FILE_MAGIC_BYTES: [u8; 4] = ['N' as u8, 'E' as u8, 'S' as u8, 0x1A];
 const PRG_UNIT_SIZE: u16 = 16;
 const CHR_UNIT_SIZE: u16 = 8;
 
@@ -62,7 +62,7 @@ impl Cartridge {
     fn read_check_is_valid_nes_file<R: Read>(file: &mut R) -> anyhow::Result<()> {
         let mut magic_bytes = [0; 4];
         file.read_exact(&mut magic_bytes)?;
-        if (magic_bytes) != NES_FILE_MAGIC_BYES {
+        if (magic_bytes) != NES_FILE_MAGIC_BYTES {
             return Err(anyhow::Error::new(NesRomReadError::FileFormatNotSupported));
         }
         Ok(())
