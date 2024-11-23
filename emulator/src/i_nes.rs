@@ -2,6 +2,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 use crate::chr_rom::ChrRom;
+use crate::enums::Mirroring;
 use crate::file_loader::{NesRomReadError, PRG_UNIT_SIZE, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES};
 use crate::prg_rom::PrgRom;
 
@@ -38,6 +39,9 @@ struct InesHeader {
 pub struct Ines {
     header: InesHeader,
     trainer: Option<[u8; 512]>,
+    mirroring: Mirroring,
+    battery: bool,
+    four_screen_vram: bool,
     prg_rom: PrgRom,
     chr_rom: Option<ChrRom>,
     mapper: u8,
@@ -53,12 +57,22 @@ impl Ines {
 
         let is_trainer_present = header.flags_6 & 0b00000100 != 0;
 
+        let mirroring = if header.flags_6 & 0b00000001 != 0 {
+            Mirroring::Vertical
+        } else {
+            Mirroring::Horizontal
+        };
+
+        let battery = header.flags_6 & 0b00000010 != 0;
+
         let mut trainer = None;
         if is_trainer_present {
             let mut trainer_data = [0; 512];
             file.read_exact(&mut trainer_data)?;
             trainer = Some(trainer_data);
         }
+
+        let four_screen_vram = header.flags_6 & 0b00001000 != 0;
 
         let prg_rom = PrgRom::new_with_data(Ines::read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?);
 
@@ -79,6 +93,9 @@ impl Ines {
         Ok(Ines {
             header,
             trainer,
+            mirroring,
+            battery,
+            four_screen_vram,
             prg_rom,
             chr_rom,
             mapper,
@@ -132,7 +149,6 @@ impl Ines {
 mod tests {
     use super::*;
     use std::io::Cursor;
-    use log::log;
 
     #[test]
     fn test_header_from_file() {
@@ -147,7 +163,6 @@ mod tests {
         assert_eq!(header.flags_9, 0x06);
         assert_eq!(header.flags_10, 0x07);
         assert_eq!(header.zero, [0x08, 0x09, 0x0A, 0x0B, 0x0C]);
-        println!("{:?}", header);
     }
 
     #[test]
@@ -162,6 +177,24 @@ mod tests {
     fn test_from_file() {
         // Super Mario Bros
         let ines = Ines::from_file("resources/smb.nes").unwrap();
+
+        // mapper
+        assert_eq!(ines.mapper, 0);
+        // mirroring
+        assert_eq!(ines.mirroring, Mirroring::Vertical);
+        // battery
+        assert_eq!(ines.battery, false);
+
+        // prg_rom
+        assert_eq!(ines.prg_rom.size(), (2 * PRG_UNIT_SIZE).into());
+        assert_eq!(ines.header.prg_rom_size, 2);
+
+        // chr_rom
+        assert_eq!(ines.chr_rom.as_ref().unwrap().size(), (1 * CHR_UNIT_SIZE).into() );
+        assert_eq!(ines.header.chr_rom_size, 1);
+
+        // trainer
+        assert_eq!(ines.trainer.is_none(), true);
 
         println!("{:?}", ines);
 

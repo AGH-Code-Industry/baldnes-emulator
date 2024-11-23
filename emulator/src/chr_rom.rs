@@ -26,4 +26,7 @@ impl ChrRom{
             rom: data
         }
     }
+    pub fn size(&self) -> usize {
+        self.rom.len()
+    }
 }

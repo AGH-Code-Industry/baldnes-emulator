@@ -3,9 +3,10 @@ pub enum Nes {
     Nes2
 }
 
+#[derive(Debug, PartialEq)]
 pub enum Mirroring {
     Horizontal,
     Vertical,
-    FourScreen,
-    SingleScreen
+    SingleScreen,
+    FourScreen
 }
