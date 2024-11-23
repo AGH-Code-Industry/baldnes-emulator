@@ -1,5 +1,5 @@
 use crate::addressing::Addressable;
-
+#[derive(Debug)]
 pub struct PrgRom {
     rom: Vec<u8>,
 }

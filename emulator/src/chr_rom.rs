@@ -1,4 +1,5 @@
 use crate::addressing::Addressable;
+#[derive(Debug)]
 pub struct ChrRom {
     rom: Vec<u8>,
 }
