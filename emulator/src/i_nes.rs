@@ -3,7 +3,8 @@ use std::io::{BufReader, Read};
 use std::path::Path;
 use crate::chr_rom::ChrRom;
 use crate::enums::Mirroring;
-use crate::file_loader::{NesRomReadError, PRG_UNIT_SIZE, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES};
+use crate::file_loader::{FileLoadable, NesRomReadError, PRG_UNIT_SIZE, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES};
+use crate::file_loader::read_banks;
 use crate::prg_rom::PrgRom;
 
 // Bytes 	Description
@@ -51,59 +52,6 @@ pub struct Ines {
 }
 
 impl Ines {
-    fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Ines> {
-        let mut file = BufReader::new(File::open(path)?);
-        let header = Ines::header_from_file(&mut file)?;
-
-        let is_trainer_present = header.flags_6 & 0b00000100 != 0;
-
-        let mirroring = if header.flags_6 & 0b00000001 != 0 {
-            Mirroring::Vertical
-        } else {
-            Mirroring::Horizontal
-        };
-
-        let battery = header.flags_6 & 0b00000010 != 0;
-
-        let mut trainer = None;
-        if is_trainer_present {
-            let mut trainer_data = [0; 512];
-            file.read_exact(&mut trainer_data)?;
-            trainer = Some(trainer_data);
-        }
-
-        let four_screen_vram = header.flags_6 & 0b00001000 != 0;
-
-        let prg_rom = PrgRom::new_with_data(Ines::read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?);
-
-
-        let chr_rom = if header.chr_rom_size != 0 {
-            Some(ChrRom::new_with_data(Ines::read_banks(&mut file, header.chr_rom_size, CHR_UNIT_SIZE)?))
-        } else {
-            None
-        };
-
-        let mapper = (header.flags_6 & 0xF0) | (header.flags_7 & 0xF0);
-
-        let play_choice_inst_rom = None;
-
-        let play_choice_10 = None;
-        let title = None;
-
-        Ok(Ines {
-            header,
-            trainer,
-            mirroring,
-            battery,
-            four_screen_vram,
-            prg_rom,
-            chr_rom,
-            mapper,
-            play_choice_inst_rom,
-            play_choice_10,
-            title
-        })
-    }
     fn header_from_file<R: Read>(file: &mut R) -> anyhow::Result<InesHeader> {
 
         let mut header = [0; 16];
@@ -133,28 +81,79 @@ impl Ines {
             zero
         })
     }
+}
 
-    fn read_banks<R: Read>(file: &mut R, bank_count: u8, unit_size: u16) -> anyhow::Result<Vec<u8>> {
-        let mut banks = Vec::new();
-        for _ in 0..bank_count {
-            let mut bank = vec![0; unit_size as usize];
-            file.read_exact(&mut bank)?;
-            banks.append(&mut bank);
+impl FileLoadable for Ines {
+    fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Ines> {
+        let mut file = BufReader::new(File::open(path)?);
+        let header = Ines::header_from_file(&mut file)?;
+
+        let is_trainer_present = header.flags_6 & 0b00000100 != 0;
+
+        let mirroring = if header.flags_6 & 0b00000001 != 0 {
+            Mirroring::Vertical
+        } else {
+            Mirroring::Horizontal
+        };
+
+        let battery = header.flags_6 & 0b00000010 != 0;
+
+        let mut trainer = None;
+        if is_trainer_present {
+            let mut trainer_data = [0; 512];
+            file.read_exact(&mut trainer_data)?;
+            trainer = Some(trainer_data);
         }
-        Ok(banks)
+
+        let four_screen_vram = header.flags_6 & 0b00001000 != 0;
+
+        let prg_rom = PrgRom::new_with_data(read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?);
+
+
+        let chr_rom = if header.chr_rom_size != 0 {
+            Some(ChrRom::new_with_data(read_banks(&mut file, header.chr_rom_size, CHR_UNIT_SIZE)?))
+        } else {
+            None
+        };
+
+        let mapper = (header.flags_6 & 0xF0) | (header.flags_7 & 0xF0);
+
+        let play_choice_inst_rom = None;
+
+        let play_choice_10 = None;
+        let title = None;
+
+        Ok(Ines {
+            header,
+            trainer,
+            mirroring,
+            battery,
+            four_screen_vram,
+            prg_rom,
+            chr_rom,
+            mapper,
+            play_choice_inst_rom,
+            play_choice_10,
+            title
+        })
     }
 }
+
+
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::io::Cursor;
+    use crate::i_nes::FileLoadable;
 
     #[test]
     fn test_header_from_file() {
         let data = [0x4E, 0x45, 0x53, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C];
         let mut cursor = Cursor::new(data);
-        let header = Ines::header_from_file(&mut cursor).unwrap();
+        let header = Ines::header_from_file(&mut cursor);
+        assert!(header.is_ok());
+        let header = header.unwrap();
         assert_eq!(header.prg_rom_size, 0x01);
         assert_eq!(header.chr_rom_size, 0x02);
         assert_eq!(header.flags_6, 0x03);
@@ -164,13 +163,12 @@ mod tests {
         assert_eq!(header.flags_10, 0x07);
         assert_eq!(header.zero, [0x08, 0x09, 0x0A, 0x0B, 0x0C]);
     }
-
     #[test]
-    fn test_read_banks() {
-        let data = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
+    fn test_bad_header_from_file() {
+        let data = [0x4E, 0x45, 0x53, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B];
         let mut cursor = Cursor::new(data);
-        let banks = Ines::read_banks(&mut cursor, 2, 3).unwrap();
-        assert_eq!(banks, vec![0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
+        let header = Ines::header_from_file(&mut cursor);
+        assert!(header.is_err());
     }
 
     #[test]
