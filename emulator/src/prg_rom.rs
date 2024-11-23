@@ -1,9 +1,11 @@
 use crate::addressing::Addressable;
-pub struct ChrRom {
+
+pub struct PrgRom {
     rom: Vec<u8>,
 }
 
-impl Addressable for ChrRom {
+
+impl Addressable for PrgRom {
     fn read(&self, address: u16) -> u8 {
         self.rom[address as usize]
     }
@@ -14,14 +16,14 @@ impl Addressable for ChrRom {
 
 }
 
-impl ChrRom{
-    pub fn new(size: usize) -> ChrRom {
-        ChrRom {
+impl PrgRom{
+    pub fn new(size: usize) -> PrgRom {
+        PrgRom {
             rom: Vec::with_capacity(size)
         }
     }
-    pub fn new_with_data(data: Vec<u8>) -> ChrRom {
-        ChrRom {
+    pub fn new_with_data(data: Vec<u8>) -> PrgRom {
+        PrgRom {
             rom: data
         }
     }
