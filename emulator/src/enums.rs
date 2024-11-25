@@ -1,3 +1,4 @@
+#[derive(Debug, PartialEq)]
 pub enum Nes {
     Ines,
     Nes2

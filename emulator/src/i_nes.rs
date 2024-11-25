@@ -60,6 +60,10 @@ impl Ines {
         if header[0..4] != NES_FILE_MAGIC_BYTES {
             return Err(NesRomReadError::MissingMagicBytes.into());
         }
+        // NES 2.0
+        if (header[7] & 0x0C) == 0x08 {
+            return Err(NesRomReadError::FileFormatNotSupported.into());
+        }
 
         let prg_rom_size = header[4];
         let chr_rom_size = header[5];
