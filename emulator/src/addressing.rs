@@ -5,13 +5,16 @@ pub trait Addressable {
 
 pub struct AddressRange {
     pub start: usize,
-    pub end: usize
+    pub end: usize,
 }
 
 impl AddressRange {
     pub fn new(start: usize, end: usize) -> AddressRange {
         if start > end {
-            panic!("AddressRange: start > end: start = {}, end = {}", start, end);
+            panic!(
+                "AddressRange: start > end: start = {}, end = {}",
+                start, end
+            );
         }
 
         AddressRange { start, end }

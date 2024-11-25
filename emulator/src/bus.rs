@@ -5,7 +5,7 @@ const ADDRESS_SPACE: usize = 0xFFFF + 1;
 
 pub struct Bus {
     mappings: [usize; ADDRESS_SPACE],
-    devices: Vec<Box<dyn Addressable>>
+    devices: Vec<Box<dyn Addressable>>,
 }
 
 impl Bus {
@@ -17,7 +17,11 @@ impl Bus {
         }
     }
 
-    pub fn register<A: Addressable + 'static>(&mut self, addressable: A, address_range: AddressRange) {
+    pub fn register<A: Addressable + 'static>(
+        &mut self,
+        addressable: A,
+        address_range: AddressRange,
+    ) {
         self.devices.push(Box::new(addressable));
         self.mappings[address_range.start..=address_range.end].fill(self.devices.len() - 1);
     }
