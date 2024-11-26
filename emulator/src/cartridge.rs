@@ -17,7 +17,7 @@ const CHR_UNIT_SIZE: u16 = 8;
 #[derive(thiserror::Error, Debug)]
 pub enum NesRomReadError {
     #[error("file format not supported")]
-    FileFormatNotSupported
+    FileFormatNotSupported,
 }
 
 impl Cartridge {
@@ -56,7 +56,12 @@ impl Cartridge {
         let mut misc_area = Vec::new();
         file.read_to_end(misc_area.as_mut())?;
 
-        Ok(Cartridge { trainer, prg_rom, chr_rom, misc_area })
+        Ok(Cartridge {
+            trainer,
+            prg_rom,
+            chr_rom,
+            misc_area,
+        })
     }
 
     fn read_check_is_valid_nes_file<R: Read>(file: &mut R) -> anyhow::Result<()> {
@@ -68,7 +73,12 @@ impl Cartridge {
         Ok(())
     }
 
-    fn read_banks<R: Read>(file: &mut R, lsb: u8, msb: u8, unit_size: u16) -> anyhow::Result<Vec<u8>> {
+    fn read_banks<R: Read>(
+        file: &mut R,
+        lsb: u8,
+        msb: u8,
+        unit_size: u16,
+    ) -> anyhow::Result<Vec<u8>> {
         let size = if msb != 0xF {
             (((msb as u16) << 8) | (lsb as u16)) * (unit_size * 1024)
         } else {
@@ -87,7 +97,7 @@ impl Cartridge {
         info.push_str("Trainer: ");
         match self.trainer {
             Some(_) => info.push_str("present\n"),
-            None => info.push_str("not present\n")
+            None => info.push_str("not present\n"),
         }
 
         info.push_str(format!("PRG ROM size: {}\n", self.prg_rom.len()).as_str());

@@ -7,7 +7,7 @@ pub struct Memory {
 impl Memory {
     pub fn new(size: usize) -> Memory {
         Memory {
-            mem: Vec::with_capacity(size)
+            mem: Vec::with_capacity(size),
         }
     }
 }
@@ -21,4 +21,3 @@ impl Addressable for Memory {
         self.mem[address as usize] = data;
     }
 }
-
