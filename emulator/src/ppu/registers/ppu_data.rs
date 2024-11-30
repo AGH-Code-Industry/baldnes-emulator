@@ -1,4 +1,4 @@
-use crate::bus::Bus;
+use crate::bus::{Bus, BusLike};
 
 pub struct PPUData {
     ppu_bus: Bus,
