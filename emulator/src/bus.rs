@@ -29,6 +29,7 @@ impl Bus {
             "Registering device at address range: {:?} with device: {:?}",
             address_range, addressable
         );
+
         self.devices.push(Box::new(addressable));
         self.mappings[address_range.start as usize..=address_range.end as usize]
             .fill(self.devices.len() - 1);
