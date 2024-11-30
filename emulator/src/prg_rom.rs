@@ -6,7 +6,7 @@ pub struct PrgRom {
 
 
 impl Addressable for PrgRom {
-    fn read(&self, address: u16) -> u8 {
+    fn read(&mut self, address: u16) -> u8 {
         self.rom[address as usize]
     }
 
