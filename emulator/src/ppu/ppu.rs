@@ -1,11 +1,11 @@
 use log::{debug, info};
 use std::fmt::Debug;
 
+use crate::addressing::Addressable;
+use crate::bus::Bus;
 use crate::ppu::registers::ppu_addr::PPUAddr;
 use crate::ppu::registers::ppu_ctrl::PPUCtrl;
 use crate::ppu::registers::ppu_data::PPUData;
-use crate::addressing::Addressable;
-use crate::bus::Bus;
 
 const MIRRORS_START_ADDRESS: u16 = 0x2008;
 const MIRRORS_END_ADDRESS: u16 = 0x3FFF;

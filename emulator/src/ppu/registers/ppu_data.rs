@@ -1,14 +1,12 @@
 use crate::bus::Bus;
 
 pub struct PPUData {
-    ppu_bus: Bus
+    ppu_bus: Bus,
 }
 
 impl PPUData {
     pub fn new(ppu_bus: Bus) -> PPUData {
-        PPUData {
-            ppu_bus
-        }
+        PPUData { ppu_bus }
     }
 
     pub fn read(&mut self, address: u16) -> u8 {
