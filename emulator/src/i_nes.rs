@@ -1,11 +1,13 @@
+use crate::chr_rom::ChrRom;
+use crate::enums::Mirroring;
+use crate::file_loader::read_banks;
+use crate::file_loader::{
+    FileLoadable, NesRomReadError, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES, PRG_UNIT_SIZE,
+};
+use crate::prg_rom::PrgRom;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
-use crate::chr_rom::ChrRom;
-use crate::enums::Mirroring;
-use crate::file_loader::{FileLoadable, NesRomReadError, PRG_UNIT_SIZE, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES};
-use crate::file_loader::read_banks;
-use crate::prg_rom::PrgRom;
 
 // Bytes 	Description
 // 0-3 	Constant $4E $45 $53 $1A (ASCII "NES" followed by MS-DOS end-of-file)
@@ -48,12 +50,11 @@ pub struct Ines {
     mapper: u8,
     play_choice_inst_rom: Option<Vec<u8>>,
     play_choice_10: Option<Vec<u8>>,
-    title: Option<[u8; 128]>
+    title: Option<[u8; 128]>,
 }
 
 impl Ines {
     fn header_from_file<R: Read>(file: &mut R) -> anyhow::Result<InesHeader> {
-
         let mut header = [0; 16];
         file.read_exact(&mut header)?;
 
@@ -82,7 +83,7 @@ impl Ines {
             prg_ram_size,
             flags_9,
             flags_10,
-            zero
+            zero,
         })
     }
 }
@@ -111,11 +112,15 @@ impl FileLoadable for Ines {
 
         let four_screen_vram = header.flags_6 & 0b00001000 != 0;
 
-        let prg_rom = PrgRom::new_with_data(read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?);
-
+        let prg_rom =
+            PrgRom::new_with_data(read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?);
 
         let chr_rom = if header.chr_rom_size != 0 {
-            Some(ChrRom::new_with_data(read_banks(&mut file, header.chr_rom_size, CHR_UNIT_SIZE)?))
+            Some(ChrRom::new_with_data(read_banks(
+                &mut file,
+                header.chr_rom_size,
+                CHR_UNIT_SIZE,
+            )?))
         } else {
             None
         };
@@ -138,22 +143,23 @@ impl FileLoadable for Ines {
             mapper,
             play_choice_inst_rom,
             play_choice_10,
-            title
+            title,
         })
     }
 }
 
-
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
     use crate::i_nes::FileLoadable;
+    use std::io::Cursor;
 
     #[test]
     fn test_header_from_file() {
-        let data = [0x4E, 0x45, 0x53, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C];
+        let data = [
+            0x4E, 0x45, 0x53, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
+            0x0B, 0x0C,
+        ];
         let mut cursor = Cursor::new(data);
         let header = Ines::header_from_file(&mut cursor);
         assert!(header.is_ok());
@@ -169,7 +175,10 @@ mod tests {
     }
     #[test]
     fn test_bad_header_from_file() {
-        let data = [0x4E, 0x45, 0x53, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B];
+        let data = [
+            0x4E, 0x45, 0x53, 0x1A, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A,
+            0x0B,
+        ];
         let mut cursor = Cursor::new(data);
         let header = Ines::header_from_file(&mut cursor);
         assert!(header.is_err());
@@ -188,17 +197,20 @@ mod tests {
         assert_eq!(ines.battery, false);
 
         // prg_rom
-        assert_eq!(ines.prg_rom.size(), (2 * PRG_UNIT_SIZE).into());
+        // inary operation `==` cannot be applied to type `usize`
+        assert_eq!(ines.prg_rom.size(), 2 * PRG_UNIT_SIZE as usize);
         assert_eq!(ines.header.prg_rom_size, 2);
 
         // chr_rom
-        assert_eq!(ines.chr_rom.as_ref().unwrap().size(), (1 * CHR_UNIT_SIZE).into() );
+        assert_eq!(
+            ines.chr_rom.as_ref().unwrap().size(),
+            1 * CHR_UNIT_SIZE as usize
+        );
         assert_eq!(ines.header.chr_rom_size, 1);
 
         // trainer
         assert_eq!(ines.trainer.is_none(), true);
 
         println!("{:?}", ines);
-
     }
 }

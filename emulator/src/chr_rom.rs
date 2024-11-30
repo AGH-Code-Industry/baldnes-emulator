@@ -12,19 +12,16 @@ impl Addressable for ChrRom {
     fn write(&mut self, address: u16, data: u8) {
         self.rom[address as usize] = data;
     }
-
 }
 
-impl ChrRom{
+impl ChrRom {
     pub fn new(size: usize) -> ChrRom {
         ChrRom {
-            rom: Vec::with_capacity(size)
+            rom: Vec::with_capacity(size),
         }
     }
     pub fn new_with_data(data: Vec<u8>) -> ChrRom {
-        ChrRom {
-            rom: data
-        }
+        ChrRom { rom: data }
     }
     pub fn size(&self) -> usize {
         self.rom.len()

@@ -14,15 +14,20 @@ pub enum NesRomReadError {
     MissingMagicBytes,
 
     #[error("missing prg rom")]
-    MissingPrgRom
+    MissingPrgRom,
 }
-
 
 pub trait FileLoadable {
-    fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self> where Self: Sized;
+    fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self>
+    where
+        Self: Sized;
 }
 
-pub fn read_banks<R: Read>(file: &mut R, bank_count: u8, unit_size: u16) -> anyhow::Result<Vec<u8>> {
+pub fn read_banks<R: Read>(
+    file: &mut R,
+    bank_count: u8,
+    unit_size: u16,
+) -> anyhow::Result<Vec<u8>> {
     let mut banks = Vec::new();
     for _ in 0..bank_count {
         let mut bank = vec![0; unit_size as usize];
@@ -40,7 +45,6 @@ fn read_check_is_valid_nes_file<R: Read>(file: &mut R) -> anyhow::Result<()> {
     }
     Ok(())
 }
-
 
 #[cfg(test)]
 mod tests {
