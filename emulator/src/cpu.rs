@@ -254,8 +254,8 @@ impl Registers {
         self.program_counter += 1;
     }
 
-    fn read_operation_code<T: BusLike>(&mut self, bus: &T) {
-        self.operation = bus.read(self.program_counter as usize);
+    fn read_operation_code<T: BusLike>(&mut self, bus: &mut T) {
+        self.operation = bus.read(self.program_counter as u16);
     }
 
     fn decode_operation<T: BusLike>(&mut self, bus: &T) {
@@ -273,98 +273,102 @@ impl Registers {
         self.step_program_counter();
     }
 
-    fn immediate_read<T: BusLike>(&mut self, bus: &T) {
-        self.memory_buffer = bus.read(self.program_counter as usize);
+    fn immediate_read<T: BusLike>(&mut self, bus: &mut T) {
+        self.memory_buffer = bus.read(self.program_counter);
         self.step_program_counter();
     }
 
-    fn read_adl<T: BusLike>(&mut self, bus: &T) {
-        self.adl = bus.read(self.program_counter as usize);
+    fn read_adl<T: BusLike>(&mut self, bus: &mut T) {
+        self.adl = bus.read(self.program_counter);
         self.step_program_counter();
     }
 
-    fn read_adh<T: BusLike>(&mut self, bus: &T) {
-        self.adh = bus.read(self.program_counter as usize);
+    fn read_adh<T: BusLike>(&mut self, bus: &mut T) {
+        self.adh = bus.read(self.program_counter);
         self.step_program_counter();
     }
 
-    fn read_zero_page<T: BusLike>(&mut self, bus: &T) {
+    fn read_zero_page<T: BusLike>(&mut self, bus: &mut T) {
         println!("Reading zero page address: {:#X}", self.adl);
-        self.memory_buffer = bus.read(self.adl as usize);
+        self.memory_buffer = bus.read(self.adl as u16);
     }
 
-    fn read_absolute<T: BusLike>(&mut self, bus: &T) {
+    fn read_absolute<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.adh as u16) << 8 | self.adl as u16;
-        self.memory_buffer = bus.read(address as usize);
+        self.memory_buffer = bus.read(address as u16);
     }
 
-    fn read_bal<T: BusLike>(&mut self, bus: &T) {
-        self.bal = bus.read(self.program_counter as usize);
+    fn read_bal<T: BusLike>(&mut self, bus: &mut T) {
+        self.bal = bus.read(self.program_counter as u16);
         self.step_program_counter();
     }
 
-    fn read_bah<T: BusLike>(&mut self, bus: &T) {
-        self.bah = bus.read(self.program_counter as usize);
+    fn read_bah<T: BusLike>(&mut self, bus: &mut T) {
+        self.bah = bus.read(self.program_counter as u16);
         self.step_program_counter();
     }
 
-    fn read_adl_indirect_bal<T: BusLike>(&mut self, bus: &T) {
+    fn read_adl_indirect_bal<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.bal + self.x) as usize;
-        self.adl = bus.read(address);
+        self.adl = bus.read(address as u16);
     }
 
-    fn read_adh_indirect_bal<T: BusLike>(&mut self, bus: &T) {
+    fn read_adh_indirect_bal<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.bal + self.x + 1) as usize;
-        self.adh = bus.read(address);
+        self.adh = bus.read(address as u16);
     }
 
     fn write_zero_page<T: BusLike>(&mut self, bus: &mut T) {
-        bus.write(self.adl as usize, self.memory_buffer);
+        bus.write(self.adl as u16, self.memory_buffer);
     }
 
     fn write_absolute<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.adh as u16) << 8 | self.adl as u16;
-        bus.write(address as usize, self.memory_buffer);
+        bus.write(address as u16, self.memory_buffer);
     }
 
-    fn read_zero_page_bal_x<T: BusLike>(&mut self, bus: &T) {
+    fn read_zero_page_bal_x<T: BusLike>(&mut self, bus: &mut T) {
         // TODO: Be careful with overflow, check if it's correct
 
         let address = (self.bal + self.x) as usize;
-        self.memory_buffer = bus.read(address);
+        self.memory_buffer = bus.read(address as u16);
     }
 
     fn write_zero_page_bal_x<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.bal + self.x) as usize;
-        bus.write(address, self.memory_buffer);
+        bus.write(address as u16, self.memory_buffer);
     }
 
-    fn read_adl_adh_absolute_index_register<T: BusLike>(&mut self, bus: &T, index_register: u8) {
+    fn read_adl_adh_absolute_index_register<T: BusLike>(
+        &mut self,
+        bus: &mut T,
+        index_register: u8,
+    ) {
         let bal_address = self.bal as usize;
         let bah_address = self.bah as usize;
         let address = ((bah_address << 8) | bal_address) + (index_register as usize);
-        self.memory_buffer = bus.read(address);
+        self.memory_buffer = bus.read(address as u16);
     }
 
-    fn read_adl_adh_absolute_x<T: BusLike>(&mut self, bus: &T) {
+    fn read_adl_adh_absolute_x<T: BusLike>(&mut self, bus: &mut T) {
         self.read_adl_adh_absolute_index_register(bus, self.x);
     }
 
-    fn read_adl_adh_absolute_y<T: BusLike>(&mut self, bus: &T) {
+    fn read_adl_adh_absolute_y<T: BusLike>(&mut self, bus: &mut T) {
         self.read_adl_adh_absolute_index_register(bus, self.y);
     }
 
-    fn read_ial<T: BusLike>(&mut self, bus: &T) {
-        self.ial = bus.read(self.program_counter as usize);
+    fn read_ial<T: BusLike>(&mut self, bus: &mut T) {
+        self.ial = bus.read(self.program_counter as u16);
         self.step_program_counter();
     }
 
-    fn read_bal_indirect_ial<T: BusLike>(&mut self, bus: &T) {
-        self.bal = bus.read(self.ial as usize);
+    fn read_bal_indirect_ial<T: BusLike>(&mut self, bus: &mut T) {
+        self.bal = bus.read(self.ial as u16);
     }
 
-    fn read_bah_indirect_ial<T: BusLike>(&mut self, bus: &T) {
-        self.bah = bus.read(self.ial as usize + 1);
+    fn read_bah_indirect_ial<T: BusLike>(&mut self, bus: &mut T) {
+        self.bah = bus.read(self.ial as u16 + 1);
     }
 
     fn shift_left_accumulator(&mut self) {
@@ -454,27 +458,39 @@ impl<T: BusLike> CPU<T> {
         match micro_instruction {
             MicroInstruction::Empty => (),
 
-            MicroInstruction::ReadOperationCode => self.registers.read_operation_code(&self.bus),
-            MicroInstruction::DecodeOperation => self.registers.decode_operation(&self.bus),
-            MicroInstruction::ImmediateRead => self.registers.immediate_read(&self.bus),
-            MicroInstruction::ReadAdh => self.registers.read_adh(&self.bus),
-            MicroInstruction::ReadAdl => self.registers.read_adl(&self.bus),
-            MicroInstruction::ReadZeroPage => self.registers.read_zero_page(&self.bus),
-            MicroInstruction::ReadAbsolute => self.registers.read_absolute(&self.bus),
-            MicroInstruction::ReadBal => self.registers.read_bal(&self.bus),
-            MicroInstruction::ReadBah => self.registers.read_bah(&self.bus),
-            MicroInstruction::ReadAdlIndirectBal => self.registers.read_adl_indirect_bal(&self.bus),
-            MicroInstruction::ReadAdhIndirectBal => self.registers.read_adh_indirect_bal(&self.bus),
-            MicroInstruction::ReadZeroPageBalX => self.registers.read_zero_page_bal_x(&self.bus),
+            MicroInstruction::ReadOperationCode => {
+                self.registers.read_operation_code(&mut self.bus)
+            }
+            MicroInstruction::DecodeOperation => self.registers.decode_operation(&mut self.bus),
+            MicroInstruction::ImmediateRead => self.registers.immediate_read(&mut self.bus),
+            MicroInstruction::ReadAdh => self.registers.read_adh(&mut self.bus),
+            MicroInstruction::ReadAdl => self.registers.read_adl(&mut self.bus),
+            MicroInstruction::ReadZeroPage => self.registers.read_zero_page(&mut self.bus),
+            MicroInstruction::ReadAbsolute => self.registers.read_absolute(&mut self.bus),
+            MicroInstruction::ReadBal => self.registers.read_bal(&mut self.bus),
+            MicroInstruction::ReadBah => self.registers.read_bah(&mut self.bus),
+            MicroInstruction::ReadAdlIndirectBal => {
+                self.registers.read_adl_indirect_bal(&mut self.bus)
+            }
+            MicroInstruction::ReadAdhIndirectBal => {
+                self.registers.read_adh_indirect_bal(&mut self.bus)
+            }
+            MicroInstruction::ReadZeroPageBalX => {
+                self.registers.read_zero_page_bal_x(&mut self.bus)
+            }
             MicroInstruction::ReadAdlAdhAbsoluteX => {
-                self.registers.read_adl_adh_absolute_x(&self.bus)
+                self.registers.read_adl_adh_absolute_x(&mut self.bus)
             }
             MicroInstruction::ReadAdlAdhAbsoluteY => {
-                self.registers.read_adl_adh_absolute_y(&self.bus)
+                self.registers.read_adl_adh_absolute_y(&mut self.bus)
             }
-            MicroInstruction::ReadIal => self.registers.read_ial(&self.bus),
-            MicroInstruction::ReadBalIndirectIal => self.registers.read_bal_indirect_ial(&self.bus),
-            MicroInstruction::ReadBahIndirectIal => self.registers.read_bah_indirect_ial(&self.bus),
+            MicroInstruction::ReadIal => self.registers.read_ial(&mut self.bus),
+            MicroInstruction::ReadBalIndirectIal => {
+                self.registers.read_bal_indirect_ial(&mut self.bus)
+            }
+            MicroInstruction::ReadBahIndirectIal => {
+                self.registers.read_bah_indirect_ial(&mut self.bus)
+            }
 
             MicroInstruction::WriteZeroPage => self.registers.write_zero_page(&mut self.bus),
             MicroInstruction::WriteAbsolute => self.registers.write_absolute(&mut self.bus),
@@ -543,13 +559,13 @@ mod tests {
     }
 
     impl BusLike for TestBus {
-        fn read(&self, address: usize) -> u8 {
-            self.memory[address] as u8
+        fn read(&mut self, address: u16) -> u8 {
+            self.memory[address as usize] as u8
         }
 
-        fn write(&mut self, address: usize, data: u8) {
+        fn write(&mut self, address: u16, data: u8) {
             println!("Writing {:#X} to address {:#X}", data, address);
-            self.memory[address] = data as usize;
+            self.memory[address as usize] = data as usize;
         }
     }
 
@@ -634,7 +650,7 @@ mod tests {
         let mut bus = TestBus::new();
         bus.write(0, OPCODE);
         bus.write(1, ADDRESS);
-        bus.write(ADDRESS as usize, VALUE);
+        bus.write(ADDRESS as u16, VALUE);
 
         let mut cpu = CPU::new(bus);
 
@@ -672,7 +688,7 @@ mod tests {
             Some(MicroInstruction::WriteZeroPage)
         );
 
-        let read_value = cpu.bus.read(ADDRESS as usize);
+        let read_value = cpu.bus.read(ADDRESS as u16);
 
         assert_eq!(read_value, EXPECTED_VALUE);
     }

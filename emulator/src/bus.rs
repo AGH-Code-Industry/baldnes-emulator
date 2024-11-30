@@ -1,45 +1,54 @@
 use crate::addressing::{AddressRange, Addressable};
 use crate::empty_device::EmptyDevice;
+use log::{debug, info};
+use std::fmt::Debug;
 
 pub trait BusLike {
-    fn read(&self, address: usize) -> u8;
-    fn write(&mut self, address: usize, data: u8);
+    fn read(&mut self, address: u16) -> u8;
+    fn write(&mut self, address: u16, data: u8);
 }
 
 pub const ADDRESS_SPACE: usize = 0xFFFF + 1;
 
 pub struct Bus {
-    mappings: [usize; ADDRESS_SPACE],
+    mappings: Vec<usize>,
     devices: Vec<Box<dyn Addressable>>,
 }
 
 impl BusLike for Bus {
-    fn read(&self, address: usize) -> u8 {
-        let device = self.devices[self.mappings[address]].as_ref();
-        device.read(address as u16)
+    fn read(&mut self, address: u16) -> u8 {
+        let device = self.devices[self.mappings[address as usize] as usize].as_mut();
+        device.read(address)
     }
 
-    fn write(&mut self, address: usize, data: u8) {
-        let device = self.devices[self.mappings[address]].as_mut();
-        device.write(address as u16, data);
+    fn write(&mut self, address: u16, data: u8) {
+        let device = self.devices[self.mappings[address as usize] as usize].as_mut();
+        device.write(address, data);
     }
 }
 
 impl Bus {
     pub fn new() -> Self {
+        info!("New Bus has been created");
         let empty_device = EmptyDevice {};
         Bus {
-            mappings: [0; ADDRESS_SPACE],
+            mappings: vec![0; ADDRESS_SPACE],
             devices: vec![Box::new(empty_device)],
         }
     }
 
-    pub fn register<A: Addressable + 'static>(
+    pub fn register<A: Addressable + Debug + 'static>(
         &mut self,
         addressable: A,
         address_range: AddressRange,
     ) {
+        debug!(
+            "Registering device at address range: {:?} with device: {:?}",
+            address_range, addressable
+        );
+
         self.devices.push(Box::new(addressable));
-        self.mappings[address_range.start..=address_range.end].fill(self.devices.len() - 1);
+        self.mappings[address_range.start as usize..=address_range.end as usize]
+            .fill(self.devices.len() - 1);
     }
 }
