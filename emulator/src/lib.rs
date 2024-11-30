@@ -1,9 +1,15 @@
 pub mod addressing;
 pub mod bus;
 pub mod cartridge;
+mod chr_rom;
 pub mod cpu;
 pub mod empty_device;
+mod enums;
+mod file_loader;
+mod i_nes;
 pub mod logging;
 pub mod memory;
+mod nes_2;
 pub mod ppu;
+mod prg_rom;
 pub mod vram;
