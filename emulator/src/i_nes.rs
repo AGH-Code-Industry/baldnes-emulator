@@ -187,6 +187,13 @@ mod tests {
     #[test]
     fn test_from_file() {
         // Super Mario Bros
+        // check if the file is in the resources folder
+        let is_file = std::path::Path::new("resources/smb.nes").exists();
+        // issue a warning if the file is not found
+        if !is_file {
+            println!("resources/smb.nes not found");
+            return;
+        }
         let ines = Ines::from_file("resources/smb.nes").unwrap();
 
         // mapper
