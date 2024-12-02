@@ -13,3 +13,4 @@ mod nes_2;
 pub mod ppu;
 mod prg_rom;
 pub mod vram;
+mod mirroring;
