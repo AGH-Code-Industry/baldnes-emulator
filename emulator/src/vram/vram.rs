@@ -1,15 +1,14 @@
-use std::cmp::PartialEq;
 use crate::addressing::Addressable;
-use log::{debug, info};
-use std::fmt::Debug;
 use crate::mirroring::Mirroring;
+use log::{debug, info};
+use std::cmp::PartialEq;
+use std::fmt::Debug;
 
 pub struct VRAM {
     nametable_1: [u8; 0x400],
     nametable_2: [u8; 0x400],
-    mirroring: Mirroring
+    mirroring: Mirroring,
 }
-
 
 impl VRAM {
     pub fn new() -> VRAM {
@@ -17,7 +16,7 @@ impl VRAM {
         VRAM {
             nametable_1: [0; 0x400],
             nametable_2: [0; 0x400],
-            mirroring: Mirroring::Horizontal
+            mirroring: Mirroring::Horizontal,
         }
     }
 
@@ -32,7 +31,10 @@ impl VRAM {
     }
 
     fn read_from_nametable(&self, addr: u16) -> u8 {
-        debug!("Attempt to read from VRAM at address {:#06X}", addr + 0x2000);
+        debug!(
+            "Attempt to read from VRAM at address {:#06X}",
+            addr + 0x2000
+        );
         if self.mirroring == Mirroring::Horizontal {
             match addr {
                 0x0000..=0x03FF => self.read_from_nametable_1(addr),
@@ -53,17 +55,27 @@ impl VRAM {
     }
 
     fn write_to_nametable_1(&mut self, addr: u16, value: u8) {
-        debug!("Nametable 1 write at relative address {:#06X} with data {:#04X}", addr, value);
+        debug!(
+            "Nametable 1 write at relative address {:#06X} with data {:#04X}",
+            addr, value
+        );
         self.nametable_1[addr as usize] = value;
     }
 
     fn write_to_nametable_2(&mut self, addr: u16, value: u8) {
-        debug!("Nametable 2 write at relative address {:#06X} with data {:#04X}", addr, value);
+        debug!(
+            "Nametable 2 write at relative address {:#06X} with data {:#04X}",
+            addr, value
+        );
         self.nametable_2[addr as usize] = value;
     }
 
     fn write_to_nametable(&mut self, addr: u16, value: u8) {
-        debug!("Attempt to write to VRAM at address {:#06X} with data {:#04X}", addr + 0x2000, value);
+        debug!(
+            "Attempt to write to VRAM at address {:#06X} with data {:#04X}",
+            addr + 0x2000,
+            value
+        );
         if self.mirroring == Mirroring::Horizontal {
             match addr {
                 0x0000..=0x03FF => self.write_to_nametable_1(addr, value),
@@ -72,8 +84,7 @@ impl VRAM {
                 0x0C00..=0x0FFF => self.write_to_nametable_2(addr - 0xC00, value),
                 _ => panic!("Invalid VRAM address: {:#06X}", addr),
             }
-        }
-        else {
+        } else {
             match addr {
                 0x0000..=0x03FF => self.write_to_nametable_1(addr, value),
                 0x0400..=0x07FF => self.write_to_nametable_2(addr - 0x400, value),
@@ -158,5 +169,3 @@ mod tests {
         assert_eq!(vram.read_from_nametable(0x0400), 84);
     }
 }
-
-
