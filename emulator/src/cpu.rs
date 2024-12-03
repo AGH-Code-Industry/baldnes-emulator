@@ -1,4 +1,4 @@
-use crate::bus::{Bus, BusLike};
+use crate::{bus::{Bus, BusLike}, enums::Mirroring};
 
 pub struct CPU<T: BusLike> {
     bus: T,
@@ -68,9 +68,17 @@ enum MicroInstruction {
     WriteZeroPage,
     WriteAbsolute,
     WriteZeroPageBalX,
+    WriteAbsoluteX,
 
     ShiftLeftAccumulator,
     ShiftLeftMemoryBuffer,
+
+    IncrementMemoryBuffer,
+    IncrementX,
+    IncrementY,
+    DecrementMemoryBuffer,
+    DecrementX,
+    DecrementY
 }
 
 #[derive(PartialEq, Debug)]
@@ -85,6 +93,18 @@ enum Operation {
     AslZeroPage,
     AslZeroPageX,
     AslAbsolute,
+    IncMemZeroPage,
+    IncMemZeroPageX,
+    IncMemAbsolute,
+    IncMemAbsoluteX,
+    IncX,
+    IncY,
+    DecMemZeroPage,
+    DecMemZeroPageX,
+    DecMemAbsolute,
+    DecMemAbsoluteX,
+    DecX,
+    DecY
 }
 
 struct OperationMicroInstructions {
@@ -138,30 +158,110 @@ impl Operation {
             Self::AslA => OperationMicroInstructions {
                 addressing_sequence: None,
                 operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::ShiftLeftAccumulator,
-                ]),
+                    MicroInstruction::ShiftLeftAccumulator
+                ])
             },
             Self::AslZeroPage => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
-                    MicroInstruction::WriteZeroPage,
-                ]),
+                    MicroInstruction::WriteZeroPage
+                ])
             },
             Self::AslZeroPageX => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_x_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
-                    MicroInstruction::WriteZeroPageBalX,
-                ]),
+                    MicroInstruction::WriteZeroPageBalX
+                ])
             },
             Self::AslAbsolute => OperationMicroInstructions {
                 addressing_sequence: Some(absolute_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
-                    MicroInstruction::WriteAbsolute,
-                ]),
+                    MicroInstruction::WriteAbsolute
+                ])
             },
+            Self::IncMemZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::IncrementMemoryBuffer,
+                    MicroInstruction::WriteZeroPage
+                ])
+            },
+            Self::IncMemZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::IncrementMemoryBuffer,
+                    MicroInstruction::WriteZeroPageBalX
+                ])
+            },
+            Self::IncMemAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::IncrementMemoryBuffer,
+                    MicroInstruction::WriteAbsolute
+                ])
+            },
+            Self::IncMemAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::IncrementMemoryBuffer,
+                    MicroInstruction::WriteAbsoluteX
+                ])
+            },
+            Self::IncX => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::IncrementX
+                ])
+            },
+            Self::IncY => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::IncrementY
+                ])
+            },
+            Self::DecMemZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::DecrementMemoryBuffer,
+                    MicroInstruction::WriteZeroPage
+                ])
+            },
+            Self::DecMemZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::DecrementMemoryBuffer,
+                    MicroInstruction::WriteZeroPageBalX
+                ])
+            },
+            Self::DecMemAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::DecrementMemoryBuffer,
+                    MicroInstruction::WriteAbsolute
+                ])
+            },
+            Self::DecMemAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::DecrementMemoryBuffer,
+                    MicroInstruction::WriteAbsoluteX
+                ])
+            },
+            Self::DecX => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::DecrementX
+                ])
+            },
+            Self::DecY => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::DecrementY
+                ])
+            }
         }
     }
 
@@ -171,6 +271,18 @@ impl Operation {
             Self::AslZeroPage => 0x06,
             Self::AslZeroPageX => 0x16,
             Self::AslAbsolute => 0x0E,
+            Self::IncMemZeroPage => 0xE6,
+            Self::IncMemZeroPageX => 0xF6,
+            Self::IncMemAbsolute => 0xEE,
+            Self::IncMemAbsoluteX => 0xFE,
+            Self::IncX => 0xE8,
+            Self::IncY => 0xC8,
+            Self::DecMemZeroPage => 0xC6,
+            Self::DecMemZeroPageX => 0xD6,
+            Self::DecMemAbsolute => 0xCE,
+            Self::DecMemAbsoluteX => 0xDE,
+            Self::DecX => 0xCA,
+            Self::DecY => 0x88
         }
     }
 
@@ -180,6 +292,18 @@ impl Operation {
             0x06 => Some(Self::AslZeroPage),
             0x16 => Some(Self::AslZeroPageX),
             0x0E => Some(Self::AslAbsolute),
+            0xE6 => Some(Self::IncMemZeroPage),
+            0xF6 => Some(Self::IncMemZeroPageX),
+            0xEE => Some(Self::IncMemAbsolute),
+            0xFE => Some(Self::IncMemAbsoluteX),
+            0xE8 => Some(Self::IncX),
+            0xC8 => Some(Self::IncY),
+            0xC6 => Some(Self::DecMemZeroPage),
+            0xD6 => Some(Self::DecMemZeroPageX),
+            0xCE => Some(Self::DecMemAbsolute),
+            0xDE => Some(Self::DecMemAbsoluteX),
+            0xCA => Some(Self::DecX),
+            0x88 => Some(Self::DecY),
             _ => None,
         }
     }
@@ -327,6 +451,11 @@ impl Registers {
         bus.write(address as u16, self.memory_buffer);
     }
 
+    fn write_absolute_x<T: BusLike>(&mut self, bus: &mut T) {
+        let address = ((self.adh as u16) << 8 | self.adl as u16) + self.x as u16;
+        bus.write(address, self.memory_buffer);
+    }
+
     fn read_zero_page_bal_x<T: BusLike>(&mut self, bus: &mut T) {
         // TODO: Be careful with overflow, check if it's correct
 
@@ -390,6 +519,61 @@ impl Registers {
         self.set_flag_value(CPUFlag::Zero, self.memory_buffer == 0);
         self.set_flag_value(CPUFlag::Negative, is_negative);
     }
+
+    fn increment_memory_buffer(&mut self) {
+        self.memory_buffer = self.memory_buffer.wrapping_add(1u8);
+        let is_zero = self.memory_buffer == 0;
+        let is_negative = self.memory_buffer & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);        
+    }
+    
+    fn increment_x(&mut self) {
+        self.x = self.x.wrapping_add(1u8);
+        let is_zero = self.x == 0;
+        let is_negative = self.x & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    fn increment_y(&mut self) {
+        self.y = self.y.wrapping_add(1u8);
+        let is_zero = self.y == 0;
+        let is_negative = self.x & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    fn dec_memory_buffer(&mut self) {
+        self.memory_buffer = self.memory_buffer.wrapping_sub(1u8);
+        let is_zero = self.memory_buffer == 0;
+        let is_negative = self.memory_buffer & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    fn dec_x(&mut self) {
+        self.x = self.x.wrapping_sub(1u8);
+        let is_zero = self.x == 0;
+        let is_negative = self.x & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);        
+    }
+
+    fn dec_y(&mut self) {
+        self.y = self.y.wrapping_sub(1u8);
+        let is_zero = self.y == 0;
+        let is_negative = self.y & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);        
+    }    
+
 }
 
 impl<T: BusLike> CPU<T> {
@@ -456,19 +640,36 @@ impl<T: BusLike> CPU<T> {
 
     fn execute_micro_instruction(&mut self, micro_instruction: &MicroInstruction) {
         match micro_instruction {
-            MicroInstruction::Empty => (),
-
+            MicroInstruction::Empty => { 
+                ()
+            }
             MicroInstruction::ReadOperationCode => {
                 self.registers.read_operation_code(&mut self.bus)
             }
-            MicroInstruction::DecodeOperation => self.registers.decode_operation(&mut self.bus),
-            MicroInstruction::ImmediateRead => self.registers.immediate_read(&mut self.bus),
-            MicroInstruction::ReadAdh => self.registers.read_adh(&mut self.bus),
-            MicroInstruction::ReadAdl => self.registers.read_adl(&mut self.bus),
-            MicroInstruction::ReadZeroPage => self.registers.read_zero_page(&mut self.bus),
-            MicroInstruction::ReadAbsolute => self.registers.read_absolute(&mut self.bus),
-            MicroInstruction::ReadBal => self.registers.read_bal(&mut self.bus),
-            MicroInstruction::ReadBah => self.registers.read_bah(&mut self.bus),
+            MicroInstruction::DecodeOperation => { 
+                self.registers.decode_operation(&mut self.bus)
+            }
+            MicroInstruction::ImmediateRead => {
+                self.registers.immediate_read(&mut self.bus)
+            }
+            MicroInstruction::ReadAdh => {
+                self.registers.read_adh(&mut self.bus)
+            }
+            MicroInstruction::ReadAdl => { 
+                self.registers.read_adl(&mut self.bus)
+            }
+            MicroInstruction::ReadZeroPage => {
+                self.registers.read_zero_page(&mut self.bus)
+            }
+            MicroInstruction::ReadAbsolute => { 
+                self.registers.read_absolute(&mut self.bus)
+            }
+            MicroInstruction::ReadBal => { 
+                self.registers.read_bal(&mut self.bus)
+            }
+            MicroInstruction::ReadBah => { 
+                self.registers.read_bah(&mut self.bus)
+            }
             MicroInstruction::ReadAdlIndirectBal => {
                 self.registers.read_adl_indirect_bal(&mut self.bus)
             }
@@ -484,22 +685,51 @@ impl<T: BusLike> CPU<T> {
             MicroInstruction::ReadAdlAdhAbsoluteY => {
                 self.registers.read_adl_adh_absolute_y(&mut self.bus)
             }
-            MicroInstruction::ReadIal => self.registers.read_ial(&mut self.bus),
+            MicroInstruction::ReadIal => {
+                self.registers.read_ial(&mut self.bus)
+            }
             MicroInstruction::ReadBalIndirectIal => {
                 self.registers.read_bal_indirect_ial(&mut self.bus)
             }
             MicroInstruction::ReadBahIndirectIal => {
                 self.registers.read_bah_indirect_ial(&mut self.bus)
             }
-
-            MicroInstruction::WriteZeroPage => self.registers.write_zero_page(&mut self.bus),
-            MicroInstruction::WriteAbsolute => self.registers.write_absolute(&mut self.bus),
+            MicroInstruction::WriteZeroPage => {
+                self.registers.write_zero_page(&mut self.bus)
+            }
+            MicroInstruction::WriteAbsolute => {
+                self.registers.write_absolute(&mut self.bus)
+            }
             MicroInstruction::WriteZeroPageBalX => {
                 self.registers.write_zero_page_bal_x(&mut self.bus)
             }
-
-            MicroInstruction::ShiftLeftAccumulator => self.registers.shift_left_accumulator(),
-            MicroInstruction::ShiftLeftMemoryBuffer => self.registers.shift_left_memory_buffer(),
+            MicroInstruction::WriteAbsoluteX => {
+                self.registers.write_absolute_x(&mut self.bus);
+            }
+            MicroInstruction::ShiftLeftAccumulator => {
+                self.registers.shift_left_accumulator()
+            }
+            MicroInstruction::ShiftLeftMemoryBuffer => {
+                self.registers.shift_left_memory_buffer()
+            }
+            MicroInstruction::IncrementMemoryBuffer => {
+                self.registers.increment_memory_buffer()
+            }
+            MicroInstruction::IncrementX => {
+                self.registers.increment_x()
+            }
+            MicroInstruction::IncrementY => {
+                self.registers.increment_y()
+            }
+            MicroInstruction::DecrementMemoryBuffer => {
+                self.registers.dec_memory_buffer()
+            }
+            MicroInstruction::DecrementX => {
+                self.registers.dec_x()
+            }
+            MicroInstruction::DecrementY => {
+                self.registers.dec_y()
+            }
         }
     }
 }
@@ -539,6 +769,8 @@ impl CPUFlag {
         }
     }
 }
+
+// ADD TESTS FOR ALL INCREMENT AND DECREMENT OPS
 
 #[cfg(test)]
 mod tests {
