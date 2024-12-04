@@ -78,7 +78,9 @@ enum MicroInstruction {
     IncrementY,
     DecrementMemoryBuffer,
     DecrementX,
-    DecrementY
+    DecrementY,
+
+    And
 }
 
 #[derive(PartialEq, Debug)]
@@ -104,7 +106,15 @@ enum Operation {
     DecMemAbsolute,
     DecMemAbsoluteX,
     DecX,
-    DecY
+    DecY,
+    AndImm,
+    AndZeroPage,
+    AndZeroPagex,
+    AndAbsolute,
+    AndAbsoluteX,
+    AndAbsoluteY,
+    AndIndirectX,
+    AndIndirectY,
 }
 
 struct OperationMicroInstructions {
@@ -152,6 +162,10 @@ impl Operation {
             MicroInstruction::ReadBahIndirectIal,
             MicroInstruction::ReadAdlAdhAbsoluteY,
             // TODO: Same as absolute_x_addressing
+        ]);
+        let immediate_addressing = 
+        MicroInstructionSequence::new(vec![
+            MicroInstruction::ImmediateRead
         ]);
 
         match self {
@@ -261,6 +275,54 @@ impl Operation {
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::DecrementY
                 ])
+            },
+            Self::AndImm => OperationMicroInstructions {
+                addressing_sequence: Some(immediate_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])    
+            },
+            Self::AndZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])
+            },
+            Self::AndZeroPagex => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])
+            },
+            Self::AndAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])
+            },
+            Self::AndAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])
+            },
+            Self::AndAbsoluteY => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])
+            },
+            Self::AndIndirectX => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])
+            },
+            Self::AndIndirectY => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::And
+                ])
             }
         }
     }
@@ -282,7 +344,15 @@ impl Operation {
             Self::DecMemAbsolute => 0xCE,
             Self::DecMemAbsoluteX => 0xDE,
             Self::DecX => 0xCA,
-            Self::DecY => 0x88
+            Self::DecY => 0x88,
+            Self::AndImm => 0x29,
+            Self::AndZeroPage => 0x25,
+            Self::AndZeroPagex => 0x35,
+            Self::AndAbsolute => 0x2D,
+            Self::AndAbsoluteX => 0x3D,
+            Self::AndAbsoluteY => 0x39,
+            Self::AndIndirectX => 0x21,
+            Self::AndIndirectY => 0x31
         }
     }
 
@@ -304,6 +374,14 @@ impl Operation {
             0xDE => Some(Self::DecMemAbsoluteX),
             0xCA => Some(Self::DecX),
             0x88 => Some(Self::DecY),
+            0x29 => Some(Self::AndImm),
+            0x25 => Some(Self::AndZeroPage),
+            0x35 => Some(Self::AndZeroPagex),
+            0x2D => Some(Self::AndAbsolute),
+            0x3D => Some(Self::AndAbsoluteX),
+            0x39 => Some(Self::AndAbsoluteY),
+            0x21 => Some(Self::AndIndirectX),
+            0x31 => Some(Self::AndIndirectY),
             _ => None,
         }
     }
@@ -572,6 +650,15 @@ impl Registers {
 
         self.set_flag_value(CPUFlag::Zero, is_zero);
         self.set_flag_value(CPUFlag::Negative, is_negative);        
+    }
+
+    fn and(&mut self) {
+        self.a = self.a & self.memory_buffer;
+        let is_zero = self.a == 0;
+        let is_negative = self.a & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
     }    
 
 }
@@ -729,6 +816,9 @@ impl<T: BusLike> CPU<T> {
             }
             MicroInstruction::DecrementY => {
                 self.registers.dec_y()
+            }
+            MicroInstruction::And => {
+                self.registers.and()
             }
         }
     }
@@ -923,5 +1013,57 @@ mod tests {
         let read_value = cpu.bus.read(ADDRESS as u16);
 
         assert_eq!(read_value, EXPECTED_VALUE);
+    }
+
+    #[test]
+    fn test_cpu_inc_mem_zero_page() {
+        let opcode: u8 = Operation::IncMemZeroPage.get_opcode();
+        let address: u8 = 0xF1;
+        let value: u8 = 10;
+        let expected_value: u8 = 11;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, address);
+        bus.write(address as u16, value);
+        let mut cpu = CPU::new(bus);
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction, 
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadAdl)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadZeroPage)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::IncrementMemoryBuffer)
+        );
+
+        cpu.step();
+
+        let read_value: u8 = cpu.bus.read(address as u16);
+        assert_eq!(read_value, expected_value);
     }
 }
