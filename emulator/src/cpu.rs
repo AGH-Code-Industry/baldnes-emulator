@@ -1215,4 +1215,405 @@ mod tests {
         let read_value = cpu.bus.read(expected_address);
         assert_eq!(read_value, expected_value);
     }
+
+    #[test]
+    fn test_cpu_inc_x() {
+        let opcode = Operation::IncX.get_opcode();
+        let x_value: u8 = 30;
+        let expected_value: u8 = 31;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::IncrementX)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.registers.x, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_inc_y() {
+        let opcode = Operation::IncY.get_opcode();
+        let y_value: u8 = 30;
+        let expected_value: u8 = 31;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.y = y_value;
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::IncrementY)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.registers.y, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_dec_mem_zero_page() {
+        let opcode: u8 = Operation::DecMemZeroPage.get_opcode();
+        let address: u8 = 0xF1;
+        let value: u8 = 10;
+        let expected_value: u8 = 9;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, address);
+        bus.write(address as u16, value);
+        let mut cpu = CPU::new(bus);
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadAdl)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadZeroPage)
+        );
+
+        println!("{}", cpu.registers.memory_buffer);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecrementMemoryBuffer)
+        );
+
+        println!("{}", cpu.registers.memory_buffer);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPage)
+        );
+
+        let read_value: u8 = cpu.bus.read(address as u16);
+        assert_eq!(read_value, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_dec_mem_zero_page_x() {
+        let opcode: u8 = Operation::DecMemZeroPageX.get_opcode();
+        let address: u8 = 0xF1;
+        let x_value: u8 = 3;
+        let value: u8 = 10;
+        let expected_value: u8 = 9;
+        let expected_address: u8 = address + x_value;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, address);
+        bus.write(expected_address as u16, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadBal)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Empty));
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadZeroPageBalX)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecrementMemoryBuffer)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPageBalX)
+        );
+
+        let read_value: u8 = cpu.bus.read(expected_address as u16);
+        assert_eq!(read_value, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_dec_mem_absolute() {
+        let opcode: u8 = Operation::DecMemAbsolute.get_opcode();
+        let adl: u8 = 0xF1;
+        let adh: u8 = 0xFF;
+        let address: u16 = 0xFFF1;
+        let value: u8 = 10;
+        let expected_value: u8 = 9;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(address, value);
+        let mut cpu = CPU::new(bus);
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadAdl)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadAdh)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadAbsolute)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecrementMemoryBuffer)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        cpu.step();
+
+        let read_value = cpu.bus.read(address);
+        assert_eq!(read_value, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_dec_mem_absolute_x() {
+        let opcode: u8 = Operation::DecMemAbsoluteX.get_opcode();
+        let adl: u8 = 0xF1;
+        let adh: u8 = 0xFF;
+        let address: u16 = 0xFFF1;
+        let value: u8 = 10;
+        let expected_value: u8 = 9;
+        let x_value: u8 = 5;
+        let expected_address = 0xFFF6;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadBal)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadBah)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadAdlAdhAbsoluteX)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecrementMemoryBuffer)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsoluteX)
+        );
+
+        cpu.step();
+
+        let read_value = cpu.bus.read(expected_address);
+        assert_eq!(read_value, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_dec_x() {
+        let opcode = Operation::DecX.get_opcode();
+        let x_value: u8 = 30;
+        let expected_value: u8 = 29;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecrementX)
+        );
+
+        assert_eq!(cpu.registers.x, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_dec_y() {
+        let opcode = Operation::DecY.get_opcode();
+        let y_value: u8 = 30;
+        let expected_value: u8 = 29;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.y = y_value;
+
+        cpu.step();
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecrementY)
+        );
+
+        assert_eq!(cpu.registers.y, expected_value);
+    }
 }
