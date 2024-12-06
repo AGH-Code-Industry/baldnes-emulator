@@ -86,6 +86,7 @@ enum MicroInstruction {
 
     LoadAccumulator,
     LoadX,
+    LoadY,
 
     And,
 }
@@ -127,6 +128,11 @@ enum Operation {
     LoadXZeroPageY,
     LoadXAbsolute,
     LoadXAbsoluteY,
+    LoadYImm,
+    LoadYZeroPage,
+    LoadYZeroPageX,
+    LoadYAbsolute,
+    LoadYAbsoluteX,
     AndImm,
     AndZeroPage,
     AndZeroPageX,
@@ -377,6 +383,36 @@ impl Operation {
                     MicroInstruction::LoadX,
                 ])
             },
+            Self::LoadYImm => OperationMicroInstructions {
+                addressing_sequence: Some(immediate_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::LoadY,
+                ])
+            },
+            Self::LoadYZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::LoadY,
+                ])
+            },
+            Self::LoadYZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::LoadY,
+                ])
+            },
+            Self::LoadYAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::LoadY,
+                ])
+            },
+            Self::LoadYAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::LoadY,
+                ])
+            },
             Self::AndImm => OperationMicroInstructions {
                 addressing_sequence: Some(immediate_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::And]),
@@ -443,6 +479,11 @@ impl Operation {
             Self::LoadXZeroPageY => 0xB6,
             Self::LoadXAbsolute => 0xAE,
             Self::LoadXAbsoluteY => 0xBE,
+            Self::LoadYImm => 0xA0,
+            Self::LoadYZeroPage => 0xA4,
+            Self::LoadYZeroPageX => 0xB4,
+            Self::LoadYAbsolute => 0xAC,
+            Self::LoadYAbsoluteX => 0xBC,
             Self::AndImm => 0x29,
             Self::AndZeroPage => 0x25,
             Self::AndZeroPageX => 0x35,
@@ -485,6 +526,11 @@ impl Operation {
             0xB6 => Some(Self::LoadXZeroPageY),
             0xAE => Some(Self::LoadXAbsolute),
             0xBE => Some(Self::LoadXAbsoluteY),
+            0xA0 => Some(Self::LoadYImm),
+            0xA4 => Some(Self::LoadYZeroPage),
+            0xB4 => Some(Self::LoadYZeroPageX),
+            0xAC => Some(Self::LoadYAbsolute),
+            0xBC => Some(Self::LoadYAbsoluteX),
             0x29 => Some(Self::AndImm),
             0x25 => Some(Self::AndZeroPage),
             0x35 => Some(Self::AndZeroPageX),
@@ -926,6 +972,7 @@ impl<T: BusLike> CPU<T> {
             MicroInstruction::DecrementY => self.registers.dec_y(),
             MicroInstruction::LoadAccumulator => self.registers.load_accumulator(),
             MicroInstruction::LoadX => self.registers.load_x(),
+            MicroInstruction::LoadY => self.registers.load_y(),
             MicroInstruction::And => self.registers.and(),
         }
     }
@@ -2151,6 +2198,141 @@ mod tests {
         assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::LoadX));
 
         assert_eq!(cpu.registers.x, value);
+    }
+
+    #[test]
+    fn test_cpu_load_y_imm() {
+        let opcode = Operation::LoadYImm.get_opcode();
+        let value: u8 = 20;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, value);
+
+        let mut cpu = CPU::new(bus);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_immediate_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::LoadY));
+
+        assert_eq!(cpu.registers.y, value);
+    }
+
+    #[test]
+    fn test_cpu_load_y_zero_page() {
+        let opcode = Operation::LoadYZeroPage.get_opcode();
+        let adl: u8 = 0x2F;
+        let value: u8 = 20;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, value);
+
+        let mut cpu = CPU::new(bus);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::LoadY));
+
+        assert_eq!(cpu.registers.y, value);
+    }
+
+    #[test]
+    fn test_cpu_load_y_zero_page_x() {
+        let opcode = Operation::LoadYZeroPageX.get_opcode();
+        let adl: u8 = 0x2F;
+        let value: u8 = 4;
+        let x_value: u8 = 25;
+        let expected_address: u16 = (adl + x_value) as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::LoadY));
+
+        assert_eq!(cpu.registers.y, value);
+    }
+
+    #[test]
+    fn test_cpu_load_y_absolute() {
+        let opcode = Operation::LoadYAbsolute.get_opcode();
+        let adl: u8 = 0x2F;
+        let adh: u8 = 0xBB;
+        let value: u8 = 4;
+        let address: u16 = 0xBB2F;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(address, value);
+
+        let mut cpu = CPU::new(bus);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::LoadY));
+
+        assert_eq!(cpu.registers.y, value);
+    }
+
+    #[test]
+    fn test_cpu_load_y_absolute_x() {
+        let opcode = Operation::LoadYAbsoluteX.get_opcode();
+        let adl: u8 = 0x2F;
+        let adh: u8 = 0xBB;
+        let value: u8 = 4;
+        let address: u16 = 0xBB2F;
+        let x_value: u8 = 36;
+        let expected_address: u16 = address + x_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::LoadY));
+
+        assert_eq!(cpu.registers.y, value);
     }
 
     #[test]
