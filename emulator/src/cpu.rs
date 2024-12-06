@@ -355,63 +355,43 @@ impl Operation {
             },
             Self::LoadXImm => OperationMicroInstructions {
                 addressing_sequence: Some(immediate_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadX,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadX]),
             },
             Self::LoadXZeroPage => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadX,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadX]),
             },
             Self::LoadXZeroPageY => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_y_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadX,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadX]),
             },
             Self::LoadXAbsolute => OperationMicroInstructions {
                 addressing_sequence: Some(absolute_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadX,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadX]),
             },
             Self::LoadXAbsoluteY => OperationMicroInstructions {
                 addressing_sequence: Some(absolute_y_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadX,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadX]),
             },
             Self::LoadYImm => OperationMicroInstructions {
                 addressing_sequence: Some(immediate_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadY,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadY]),
             },
             Self::LoadYZeroPage => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadY,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadY]),
             },
             Self::LoadYZeroPageX => OperationMicroInstructions {
                 addressing_sequence: Some(zero_page_x_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadY,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadY]),
             },
             Self::LoadYAbsolute => OperationMicroInstructions {
                 addressing_sequence: Some(absolute_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadY,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadY]),
             },
             Self::LoadYAbsoluteX => OperationMicroInstructions {
                 addressing_sequence: Some(absolute_x_addressing),
-                operation_sequence: MicroInstructionSequence::new(vec![
-                    MicroInstruction::LoadY,
-                ])
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadY]),
             },
             Self::AndImm => OperationMicroInstructions {
                 addressing_sequence: Some(immediate_addressing),
