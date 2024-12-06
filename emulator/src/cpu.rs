@@ -937,7 +937,25 @@ mod tests {
         }
     }
 
-    fn test_immediate_read(cpu: &mut CPU<TestBus>) {
+    fn _test_read_and_decode_operation(cpu: &mut CPU<TestBus>) {
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ReadOperationCode)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::DecodeOperation)
+        );
+    }
+
+    fn _test_immediate_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -947,7 +965,7 @@ mod tests {
         );
     }
 
-    fn test_zero_page_read(cpu: &mut CPU<TestBus>) {
+    fn _test_zero_page_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -965,7 +983,7 @@ mod tests {
         );
     }
 
-    fn test_zero_page_x_read(cpu: &mut CPU<TestBus>) {
+    fn _test_zero_page_x_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -988,7 +1006,7 @@ mod tests {
         );
     }
 
-    fn test_absolute_read(cpu: &mut CPU<TestBus>) {
+    fn _test_absolute_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -1014,7 +1032,7 @@ mod tests {
         );
     }
 
-    fn test_absolute_x_read(cpu: &mut CPU<TestBus>) {
+    fn _test_absolute_x_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -1040,7 +1058,7 @@ mod tests {
         );
     }
 
-    fn test_absolute_y_read(cpu: &mut CPU<TestBus>) {
+    fn _test_absolute_y_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -1066,7 +1084,7 @@ mod tests {
         );
     }
 
-    fn test_indirect_x_read(cpu: &mut CPU<TestBus>) {
+    fn _test_indirect_x_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -1105,7 +1123,7 @@ mod tests {
         );
     }
 
-    fn test_indirect_y_read(cpu: &mut CPU<TestBus>) {
+    fn _test_indirect_y_read(cpu: &mut CPU<TestBus>) {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Execution);
@@ -1224,16 +1242,9 @@ mod tests {
 
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_read(&mut cpu);
+        _test_zero_page_read(&mut cpu);
 
         cpu.step();
         cpu.step();
@@ -1262,16 +1273,9 @@ mod tests {
         bus.write(address as u16, value);
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_read(&mut cpu);
+        _test_zero_page_read(&mut cpu);
 
         cpu.step();
 
@@ -1284,7 +1288,10 @@ mod tests {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Fetching);
-        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::WriteZeroPage));
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPage)
+        );
 
         let read_value: u8 = cpu.bus.read(address as u16);
         assert_eq!(read_value, expected_value);
@@ -1306,16 +1313,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_x_read(&mut cpu);
+        _test_zero_page_x_read(&mut cpu);
 
         cpu.step();
 
@@ -1328,7 +1328,10 @@ mod tests {
         cpu.step();
 
         assert_eq!(cpu.state, CPUState::Fetching);
-        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::WriteZeroPageBalX));
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPageBalX)
+        );
 
         let read_value: u8 = cpu.bus.read(expected_address as u16);
         assert_eq!(read_value, expected_value);
@@ -1350,16 +1353,9 @@ mod tests {
         bus.write(address, value);
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_read(&mut cpu);
+        _test_absolute_read(&mut cpu);
 
         cpu.step();
 
@@ -1400,16 +1396,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_x_read(&mut cpu);
+        _test_absolute_x_read(&mut cpu);
 
         cpu.step();
 
@@ -1442,14 +1431,7 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
-
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
+        _test_read_and_decode_operation(&mut cpu);
 
         cpu.step();
 
@@ -1473,14 +1455,7 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.y = y_value;
 
-        cpu.step();
-        cpu.step();
-
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
+        _test_read_and_decode_operation(&mut cpu);
 
         cpu.step();
 
@@ -1506,16 +1481,9 @@ mod tests {
         bus.write(address as u16, value);
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_read(&mut cpu);
+        _test_zero_page_read(&mut cpu);
 
         println!("{}", cpu.registers.memory_buffer);
 
@@ -1557,16 +1525,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_x_read(&mut cpu);
+        _test_zero_page_x_read(&mut cpu);
 
         cpu.step();
 
@@ -1604,16 +1565,9 @@ mod tests {
         bus.write(address, value);
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_read(&mut cpu);
+        _test_absolute_read(&mut cpu);
 
         cpu.step();
 
@@ -1654,16 +1608,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_x_read(&mut cpu);
+        _test_absolute_x_read(&mut cpu);
 
         cpu.step();
 
@@ -1696,14 +1643,7 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
-
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
+        _test_read_and_decode_operation(&mut cpu);
 
         cpu.step();
 
@@ -1727,14 +1667,7 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.y = y_value;
 
-        cpu.step();
-        cpu.step();
-
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
+        _test_read_and_decode_operation(&mut cpu);
 
         cpu.step();
 
@@ -1758,16 +1691,9 @@ mod tests {
 
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_immediate_read(&mut cpu);
+        _test_immediate_read(&mut cpu);
 
         cpu.step();
 
@@ -1793,16 +1719,9 @@ mod tests {
 
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_read(&mut cpu);
+        _test_zero_page_read(&mut cpu);
 
         cpu.step();
 
@@ -1831,16 +1750,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_x_read(&mut cpu);
+        _test_zero_page_x_read(&mut cpu);
 
         cpu.step();
 
@@ -1869,16 +1781,9 @@ mod tests {
 
         let mut cpu = CPU::new(bus);
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_read(&mut cpu);
+        _test_absolute_read(&mut cpu);
 
         cpu.step();
 
@@ -1887,6 +1792,146 @@ mod tests {
             cpu.current_micro_instruction,
             Some(MicroInstruction::LoadAccumulator)
         );
+    }
+
+    #[test]
+    fn test_cpu_load_acc_absolute_x() {
+        let opcode = Operation::LoadAccAbsoluteX.get_opcode();
+        let value: u8 = 31;
+        let adl: u8 = 0x80;
+        let adh: u8 = 0xAA;
+        let address: u16 = 0xAA80;
+        let x_value: u8 = 10;
+        let expected_address: u16 = address + x_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::LoadAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, value);
+    }
+
+    #[test]
+    fn test_cpu_load_acc_absolute_y() {
+        let opcode = Operation::LoadAccAbsoluteY.get_opcode();
+        let value: u8 = 31;
+        let adl: u8 = 0x80;
+        let adh: u8 = 0xAA;
+        let address: u16 = 0xAA80;
+        let y_value: u8 = 10;
+        let expected_address: u16 = address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::LoadAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, value);
+    }
+
+    #[test]
+    fn test_cpu_load_acc_indirect_x() {
+        let opcode = Operation::LoadAccIndirectX.get_opcode();
+        let value: u8 = 30;
+        let x_value: u8 = 10;
+        let adl: u8 = 0x80;
+        let expected_address: u16 = (adl + x_value) as u16;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, indirect_adl);
+        bus.write(expected_address + 1, indirect_adh);
+        bus.write(indirect_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::LoadAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, value);
+    }
+
+    #[test]
+    fn test_cpu_load_acc_indirect_y() {
+        let opcode = Operation::LoadAccIndirectY.get_opcode();
+        let value: u8 = 60;
+        let y_value: u8 = 20;
+        let adl: u8 = 0x80;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+        let expected_address: u16 = indirect_address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, indirect_adl);
+        bus.write((adl + 1) as u16, indirect_adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::LoadAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, value);
     }
 
     #[test]
@@ -1903,16 +1948,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.a = a_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_immediate_read(&mut cpu);
+        _test_immediate_read(&mut cpu);
 
         cpu.step();
 
@@ -1938,16 +1976,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.a = a_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_read(&mut cpu);
+        _test_zero_page_read(&mut cpu);
 
         cpu.step();
 
@@ -1976,16 +2007,9 @@ mod tests {
         cpu.registers.a = a_value;
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_zero_page_x_read(&mut cpu);
+        _test_zero_page_x_read(&mut cpu);
 
         cpu.step();
 
@@ -2014,16 +2038,9 @@ mod tests {
         let mut cpu = CPU::new(bus);
         cpu.registers.a = a_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_read(&mut cpu);
+        _test_absolute_read(&mut cpu);
 
         cpu.step();
 
@@ -2055,16 +2072,9 @@ mod tests {
         cpu.registers.a = a_value;
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_x_read(&mut cpu);
+        _test_absolute_x_read(&mut cpu);
 
         cpu.step();
 
@@ -2096,16 +2106,9 @@ mod tests {
         cpu.registers.a = a_value;
         cpu.registers.y = y_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_absolute_y_read(&mut cpu);
+        _test_absolute_y_read(&mut cpu);
 
         cpu.step();
 
@@ -2139,16 +2142,9 @@ mod tests {
         cpu.registers.a = a_value;
         cpu.registers.x = x_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_indirect_x_read(&mut cpu);
+        _test_indirect_x_read(&mut cpu);
 
         cpu.step();
 
@@ -2182,16 +2178,9 @@ mod tests {
         cpu.registers.a = a_value;
         cpu.registers.y = y_value;
 
-        cpu.step();
-        cpu.step();
+        _test_read_and_decode_operation(&mut cpu);
 
-        assert_eq!(cpu.state, CPUState::Execution);
-        assert_eq!(
-            cpu.current_micro_instruction,
-            Some(MicroInstruction::DecodeOperation)
-        );
-
-        test_indirect_y_read(&mut cpu);
+        _test_indirect_y_read(&mut cpu);
 
         cpu.step();
 
