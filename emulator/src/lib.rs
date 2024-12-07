@@ -9,7 +9,7 @@ mod file_loader;
 mod i_nes;
 pub mod logging;
 pub mod memory;
+mod mirroring;
 mod nes_2;
 pub mod ppu;
 mod prg_rom;
-pub mod vram;
