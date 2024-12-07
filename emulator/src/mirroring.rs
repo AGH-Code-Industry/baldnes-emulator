@@ -7,13 +7,11 @@ pub enum Mirroring {
 
 impl PartialEq for Mirroring {
     fn eq(&self, other: &Self) -> bool {
-        if let (Mirroring::Horizontal, Mirroring::Horizontal) = (self, other) {
-            true
-        } else if let (Mirroring::Vertical, Mirroring::Vertical) = (self, other) {
-            true
-        } else {
-            false
-        }
+        matches!(
+            (self, other),
+            (Mirroring::Horizontal, Mirroring::Horizontal)
+                | (Mirroring::Vertical, Mirroring::Vertical)
+        )
     }
 }
 
