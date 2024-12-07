@@ -1,11 +1,11 @@
 use crate::cartridge::cartridge::CartridgeData;
-use crate::cartridge::chr_rom::ChrRom;
-use crate::cartridge::enums::Mirroring;
+use crate::cartridge::common::enums::Mirroring;
 use crate::cartridge::file_loader::read_banks;
 use crate::cartridge::file_loader::{
     FileLoadable, NesRomReadError, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES, PRG_UNIT_SIZE,
 };
-use crate::cartridge::prg_rom::PrgRom;
+use crate::cartridge::registers::chr_rom::ChrRom;
+use crate::cartridge::registers::prg_rom::PrgRom;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -161,7 +161,7 @@ impl CartridgeData for Ines {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cartridge::i_nes::FileLoadable;
+    use crate::cartridge::formats::i_nes::FileLoadable;
     use std::io::Cursor;
 
     #[test]

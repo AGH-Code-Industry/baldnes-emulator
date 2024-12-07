@@ -1,7 +1,7 @@
 use crate::cartridge::cartridge::CartridgeData;
-use crate::cartridge::chr_rom::ChrRom;
 use crate::cartridge::file_loader::{FileLoadable, NesRomReadError, NES_FILE_MAGIC_BYTES};
-use crate::cartridge::prg_rom::PrgRom;
+use crate::cartridge::registers::chr_rom::ChrRom;
+use crate::cartridge::registers::prg_rom::PrgRom;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;

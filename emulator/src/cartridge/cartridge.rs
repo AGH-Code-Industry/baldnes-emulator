@@ -1,9 +1,10 @@
-use crate::cartridge::chr_rom::ChrRom;
-use crate::cartridge::enums::Nes;
+use crate::cartridge::common::consts::NES_FILE_MAGIC_BYTES;
+use crate::cartridge::common::enums::Nes;
 use crate::cartridge::file_loader::{FileLoadable, NesRomReadError};
-use crate::cartridge::i_nes::Ines;
-use crate::cartridge::nes_2::Nes2;
-use crate::cartridge::prg_rom::PrgRom;
+use crate::cartridge::formats::i_nes::Ines;
+use crate::cartridge::formats::nes_2::Nes2;
+use crate::cartridge::registers::chr_rom::ChrRom;
+use crate::cartridge::registers::prg_rom::PrgRom;
 use byteorder::ReadBytesExt;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
@@ -17,10 +18,6 @@ pub trait CartridgeData {
 pub struct Cartridge {
     data: Box<dyn CartridgeData>,
 }
-
-const NES_FILE_MAGIC_BYTES: [u8; 4] = ['N' as u8, 'E' as u8, 'S' as u8, 0x1A];
-const PRG_UNIT_SIZE: u16 = 16;
-const CHR_UNIT_SIZE: u16 = 8;
 
 impl Cartridge {
     // prepare cartridge with FileLoadable trait
