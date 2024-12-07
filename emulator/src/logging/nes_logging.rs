@@ -30,5 +30,10 @@ pub fn init_logging() {
         )
         .unwrap();
 
-    log4rs::init_config(config).unwrap();
+    match log4rs::init_config(config) {
+        Ok(_) => (),
+        Err(e) => {
+            panic!("Error initializing log4rs: {}", e);
+        }
+    }
 }
