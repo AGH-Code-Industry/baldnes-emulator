@@ -1,4 +1,7 @@
-use crate::file_loader::{FileLoadable, NesRomReadError, NES_FILE_MAGIC_BYTES};
+use crate::cartridge::cartridge::CartridgeData;
+use crate::cartridge::file_loader::{FileLoadable, NesRomReadError, NES_FILE_MAGIC_BYTES};
+use crate::cartridge::registers::chr_rom::ChrRom;
+use crate::cartridge::registers::prg_rom::PrgRom;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -8,7 +11,6 @@ struct Nes2Header {}
 pub struct Nes2 {
     header: Nes2Header,
 }
-
 impl Nes2 {
     fn header_from_file<R: Read>(file: &mut R) -> anyhow::Result<Nes2Header> {
         let mut header = [0; 16];
@@ -23,6 +25,16 @@ impl Nes2 {
         }
 
         Ok(Nes2Header {})
+    }
+}
+
+impl CartridgeData for Nes2 {
+    fn prg_rom(&self) -> &PrgRom {
+        unimplemented!()
+    }
+
+    fn chr_rom(&self) -> &ChrRom {
+        unimplemented!()
     }
 }
 

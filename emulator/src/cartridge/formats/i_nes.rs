@@ -1,10 +1,11 @@
-use crate::chr_rom::ChrRom;
-use crate::enums::Mirroring;
-use crate::file_loader::read_banks;
-use crate::file_loader::{
+use crate::cartridge::cartridge::CartridgeData;
+use crate::cartridge::common::enums::Mirroring;
+use crate::cartridge::file_loader::read_banks;
+use crate::cartridge::file_loader::{
     FileLoadable, NesRomReadError, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES, PRG_UNIT_SIZE,
 };
-use crate::prg_rom::PrgRom;
+use crate::cartridge::registers::chr_rom::ChrRom;
+use crate::cartridge::registers::prg_rom::PrgRom;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
@@ -148,10 +149,19 @@ impl FileLoadable for Ines {
     }
 }
 
+impl CartridgeData for Ines {
+    fn prg_rom(&self) -> &PrgRom {
+        &self.prg_rom
+    }
+
+    fn chr_rom(&self) -> &ChrRom {
+        self.chr_rom.as_ref().unwrap()
+    }
+}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::i_nes::FileLoadable;
+    use crate::cartridge::formats::i_nes::FileLoadable;
     use std::io::Cursor;
 
     #[test]
