@@ -21,6 +21,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
 
       - name: Build
+        env:
+          RUSTFLAGS: -D warnings
         run: cargo build
 
       - name: Test
