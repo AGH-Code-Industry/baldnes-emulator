@@ -1,7 +1,13 @@
 use crate::addressing::Addressable;
-#[derive(Debug)]
+use std::fmt::Debug;
 pub struct ChrRom {
     rom: Vec<u8>,
+}
+
+impl Debug for ChrRom {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ChrRom").field("rom", &self.rom).finish()
+    }
 }
 
 impl Addressable for ChrRom {
