@@ -1,10 +1,10 @@
-use crate::cartridge::cartridge::CartridgeData;
 use crate::cartridge::common::consts::NES_FILE_MAGIC_BYTES;
 use crate::cartridge::common::consts::PRG_UNIT_SIZE;
 use crate::cartridge::common::enums::errors::NesRomReadError;
 use crate::cartridge::common::enums::mirroring::Mirroring;
-use crate::cartridge::file_loader::read_banks;
-use crate::cartridge::file_loader::FileLoadable;
+use crate::cartridge::common::traits::cartridge_data::CartridgeData;
+use crate::cartridge::common::traits::file_loadable::FileLoadable;
+use crate::cartridge::common::utils::file::read_banks;
 use crate::cartridge::registers::chr_ram::ChrRam;
 use crate::cartridge::registers::chr_rom::ChrRom;
 use crate::cartridge::registers::prg_ram::PrgRam;
@@ -62,6 +62,7 @@ pub struct Nes2 {
     trainer: Option<[u8; 512]>,
     prg_ram: Option<PrgRam>,
     chr_ram: Option<ChrRam>,
+    mirroring: Mirroring,
 }
 
 impl Debug for Nes2 {
@@ -156,8 +157,6 @@ impl FileLoadable for Nes2 {
             Mirroring::Horizontal
         };
 
-        let battery = header.flags_6 & 0b00000010 != 0;
-
         let mut trainer = if is_trainer_present {
             let mut trainer_data = [0; 512];
             file.read_exact(&mut trainer_data)?;
@@ -165,8 +164,6 @@ impl FileLoadable for Nes2 {
         } else {
             None
         };
-
-        let four_screen_vram = header.flags_6 & 0b00001000 != 0;
 
         let prg_rom =
             PrgRom::new_with_data(read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?);
@@ -200,6 +197,7 @@ impl FileLoadable for Nes2 {
             trainer,
             prg_ram,
             chr_ram,
+            mirroring,
         })
     }
 }

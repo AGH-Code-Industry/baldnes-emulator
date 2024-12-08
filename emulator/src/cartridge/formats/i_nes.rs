@@ -1,7 +1,7 @@
-use crate::cartridge::cartridge::CartridgeData;
 use crate::cartridge::common::enums::mirroring::Mirroring;
-use crate::cartridge::file_loader::read_banks;
-use crate::cartridge::file_loader::FileLoadable;
+use crate::cartridge::common::traits::cartridge_data::CartridgeData;
+use crate::cartridge::common::traits::file_loadable::FileLoadable;
+use crate::cartridge::common::utils::file::read_banks;
 use crate::cartridge::registers::chr_rom::ChrRom;
 use crate::cartridge::registers::prg_rom::PrgRom;
 use std::fs::File;
@@ -197,7 +197,7 @@ impl CartridgeData for Ines {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cartridge::formats::i_nes::FileLoadable;
+    use crate::cartridge::common::traits::file_loadable::FileLoadable;
     use std::io::Cursor;
 
     #[test]

@@ -1,11 +1,4 @@
 use std::io::Read;
-use std::path::Path;
-
-pub trait FileLoadable {
-    fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self>
-    where
-        Self: Sized;
-}
 
 pub fn read_banks<R: Read>(
     file: &mut R,
@@ -23,8 +16,7 @@ pub fn read_banks<R: Read>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    use crate::cartridge::common::utils::file::read_banks;
     #[test]
     fn test_read_banks_2_4() {
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8];
