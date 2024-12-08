@@ -5,7 +5,6 @@ use crate::cartridge::formats::i_nes::Ines;
 use crate::cartridge::formats::nes_2::Nes2;
 use crate::cartridge::registers::chr_rom::ChrRom;
 use crate::cartridge::registers::prg_rom::PrgRom;
-use byteorder::ReadBytesExt;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;

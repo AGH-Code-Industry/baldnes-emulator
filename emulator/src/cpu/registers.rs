@@ -3,6 +3,7 @@ use crate::cpu::cpu::CPUFlag;
 use crate::cpu::micro_instructions::MicroInstructionSequence;
 use crate::cpu::operations::Operation;
 
+#[allow(dead_code)]
 pub struct Registers {
     pub x: u8,
     pub y: u8,
@@ -93,7 +94,7 @@ impl Registers {
     pub fn read_operation_code<T: BusLike>(&mut self, bus: &mut T) {
         self.operation = bus.read(self.program_counter as u16);
     }
-
+    #[allow(unused_variables)]
     pub fn decode_operation<T: BusLike>(&mut self, bus: &T) {
         let operation_code = self.operation;
         println!("Operation code: {:#X}", operation_code);

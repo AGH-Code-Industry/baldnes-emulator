@@ -1,6 +1,7 @@
 use crate::addressing::Addressable;
 use crate::mirroring::Mirroring;
 use log::{debug, info};
+#[allow(unused_imports)]
 use std::cmp::PartialEq;
 use std::fmt::Debug;
 

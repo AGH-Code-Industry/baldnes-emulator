@@ -37,15 +37,6 @@ pub fn read_banks<R: Read>(
     Ok(banks)
 }
 
-fn read_check_is_valid_nes_file<R: Read>(file: &mut R) -> anyhow::Result<()> {
-    let mut magic_bytes = [0; 4];
-    file.read_exact(&mut magic_bytes)?;
-    if (magic_bytes) != NES_FILE_MAGIC_BYTES {
-        return Err(anyhow::Error::new(NesRomReadError::FileFormatNotSupported));
-    }
-    Ok(())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

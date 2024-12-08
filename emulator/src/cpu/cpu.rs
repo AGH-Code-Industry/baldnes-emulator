@@ -1,8 +1,8 @@
 use crate::bus::BusLike;
 use crate::cpu::micro_instructions::{MicroInstruction, MicroInstructionSequence};
-use crate::cpu::operations::Operation;
 use crate::cpu::registers::Registers;
 
+#[allow(dead_code)]
 pub struct CPU<T: BusLike> {
     bus: T,
     registers: Registers,
@@ -28,7 +28,7 @@ pub enum CPUState {
     Fetching,
     Execution,
 }
-
+#[allow(dead_code)]
 impl<T: BusLike> CPU<T> {
     fn new(bus: T) -> Self {
         let registers = Registers::new();
@@ -168,6 +168,7 @@ impl CPUFlag {
 
 #[cfg(test)]
 mod tests {
+    use crate::cpu::operations::Operation;
     use std::collections::btree_map::Values;
 
     use crate::bus;
