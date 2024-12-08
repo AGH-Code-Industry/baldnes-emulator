@@ -6,8 +6,7 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
-struct Nes2Header {
-}
+struct Nes2Header {}
 #[allow(dead_code)]
 pub struct Nes2 {
     header: Nes2Header,
