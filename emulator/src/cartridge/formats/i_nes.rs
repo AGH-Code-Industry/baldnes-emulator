@@ -10,6 +10,8 @@ use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
+use std::fmt::Debug;
+
 // Bytes 	Description
 // 0-3 	Constant $4E $45 $53 $1A (ASCII "NES" followed by MS-DOS end-of-file)
 // 4 	Size of PRG ROM in 16 KB units
@@ -20,7 +22,6 @@ use std::path::Path;
 // 9 	Flags 9 – TV system (rarely used extension)
 // 10 	Flags 10 – TV system, PRG-RAM presence (unofficial, rarely used extension)
 // 11-15 	Unused padding (should be filled with zero, but some rippers put their name across bytes 7-15)
-#[derive(Debug)]
 struct InesHeader {
     prg_rom_size: u8,
     chr_rom_size: u8,
@@ -32,6 +33,21 @@ struct InesHeader {
     zero: [u8; 5],
 }
 
+impl Debug for InesHeader {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("InesHeader")
+            .field("prg_rom_size", &self.prg_rom_size)
+            .field("chr_rom_size", &self.chr_rom_size)
+            .field("flags_6", &self.flags_6)
+            .field("flags_7", &self.flags_7)
+            .field("prg_ram_size", &self.prg_ram_size)
+            .field("flags_9", &self.flags_9)
+            .field("flags_10", &self.flags_10)
+            .field("zero", &self.zero)
+            .finish()
+    }
+}
+
 // Header (16 bytes)
 // Trainer, if present (0 or 512 bytes)
 // PRG ROM data (16384 * x bytes)
@@ -39,7 +55,6 @@ struct InesHeader {
 // PlayChoice INST-ROM, if present (0 or 8192 bytes)
 // PlayChoice PROM, if present (16 bytes Data, 16 bytes CounterOut) (this is often missing; see PC10 ROM-Images for details)
 // Some ROM-Images additionally contain a 128-byte (or sometimes 127-byte) title at the end of the file.
-#[derive(Debug)]
 pub struct Ines {
     header: InesHeader,
     trainer: Option<[u8; 512]>,
@@ -52,6 +67,24 @@ pub struct Ines {
     play_choice_inst_rom: Option<Vec<u8>>,
     play_choice_10: Option<Vec<u8>>,
     title: Option<[u8; 128]>,
+}
+
+impl Debug for Ines {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Ines")
+            .field("header", &self.header)
+            .field("trainer", &self.trainer)
+            .field("mirroring", &self.mirroring)
+            .field("battery", &self.battery)
+            .field("four_screen_vram", &self.four_screen_vram)
+            .field("prg_rom", &self.prg_rom)
+            .field("chr_rom", &self.chr_rom)
+            .field("mapper", &self.mapper)
+            .field("play_choice_inst_rom", &self.play_choice_inst_rom)
+            .field("play_choice_10", &self.play_choice_10)
+            .field("title", &self.title)
+            .finish()
+    }
 }
 
 impl Ines {

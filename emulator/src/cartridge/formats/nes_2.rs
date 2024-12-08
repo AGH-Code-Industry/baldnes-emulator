@@ -7,7 +7,7 @@ use std::io::{BufReader, Read};
 use std::path::Path;
 
 struct Nes2Header {}
-
+#[allow(dead_code)]
 pub struct Nes2 {
     header: Nes2Header,
 }
@@ -44,5 +44,19 @@ impl FileLoadable for Nes2 {
         let header = Nes2::header_from_file(&mut file)?;
 
         Ok(Nes2 { header })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_header_from_file() {
+        let data = [
+            'N' as u8, 'E' as u8, 'S' as u8, 0x1A, 0, 0, 0, 0x08, 0, 0, 0, 0, 0, 0, 0, 0,
+        ];
+        let mut cursor = std::io::Cursor::new(data);
+        let header = Nes2::header_from_file(&mut cursor).unwrap();
     }
 }
