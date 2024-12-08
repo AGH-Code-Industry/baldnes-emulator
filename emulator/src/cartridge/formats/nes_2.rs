@@ -74,6 +74,7 @@ impl Debug for Nes2 {
             .field("trainer", &self.trainer)
             .field("prg_ram", &self.prg_ram)
             .field("chr_ram", &self.chr_ram)
+            .field("mirroring", &self.mirroring)
             .finish()
     }
 }
@@ -157,13 +158,12 @@ impl FileLoadable for Nes2 {
             Mirroring::Horizontal
         };
 
-        let mut trainer = if is_trainer_present {
+        let mut trainer = None;
+        if is_trainer_present {
             let mut trainer_data = [0; 512];
             file.read_exact(&mut trainer_data)?;
-            Some(trainer_data)
-        } else {
-            None
-        };
+            trainer = Some(trainer_data);
+        }
 
         let prg_rom =
             PrgRom::new_with_data(read_banks(&mut file, header.prg_rom_size, PRG_UNIT_SIZE)?);

@@ -27,10 +27,4 @@ impl ChrRam {
             ram: Vec::with_capacity(size),
         }
     }
-    pub fn new_with_data(data: Vec<u8>) -> ChrRam {
-        ChrRam { ram: data }
-    }
-    pub fn size(&self) -> usize {
-        self.ram.len()
-    }
 }

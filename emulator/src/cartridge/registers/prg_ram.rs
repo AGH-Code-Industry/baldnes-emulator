@@ -27,11 +27,4 @@ impl PrgRam {
             ram: Vec::with_capacity(size),
         }
     }
-    pub fn new_with_data(data: Vec<u8>) -> PrgRam {
-        PrgRam { ram: data }
-    }
-
-    pub fn size(&self) -> usize {
-        self.ram.len()
-    }
 }
