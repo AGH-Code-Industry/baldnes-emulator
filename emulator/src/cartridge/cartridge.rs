@@ -1,6 +1,8 @@
 use crate::cartridge::common::consts::NES_FILE_MAGIC_BYTES;
-use crate::cartridge::common::enums::Nes;
-use crate::cartridge::file_loader::{FileLoadable, NesRomReadError};
+use crate::cartridge::common::enums::errors::NesRomReadError;
+use crate::cartridge::common::enums::nes::Nes;
+use crate::cartridge::common::traits::cartridge_data::CartridgeData;
+use crate::cartridge::common::traits::file_loadable::FileLoadable;
 use crate::cartridge::formats::i_nes::Ines;
 use crate::cartridge::formats::nes_2::Nes2;
 use crate::cartridge::registers::chr_rom::ChrRom;
@@ -8,11 +10,6 @@ use crate::cartridge::registers::prg_rom::PrgRom;
 use std::fs::File;
 use std::io::{BufReader, Read, Seek, SeekFrom};
 use std::path::Path;
-
-pub trait CartridgeData {
-    fn prg_rom(&self) -> &PrgRom;
-    fn chr_rom(&self) -> &ChrRom;
-}
 
 pub struct Cartridge {
     data: Box<dyn CartridgeData>,
@@ -72,6 +69,8 @@ impl CartridgeData for Cartridge {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cartridge::common::consts::{CHR_UNIT_SIZE, PRG_UNIT_SIZE};
+
     #[test]
     fn test_from_file() {
         // Super Mario Bros
@@ -90,13 +89,7 @@ mod tests {
 
         let chr_rom = cartridge.chr_rom();
 
-        assert_eq!(
-            prg_rom.size(),
-            2 * crate::cartridge::file_loader::PRG_UNIT_SIZE as usize
-        );
-        assert_eq!(
-            chr_rom.size(),
-            1 * crate::cartridge::file_loader::CHR_UNIT_SIZE as usize
-        );
+        assert_eq!(prg_rom.size(), 2 * PRG_UNIT_SIZE as usize);
+        assert_eq!(chr_rom.size(), 1 * CHR_UNIT_SIZE as usize);
     }
 }

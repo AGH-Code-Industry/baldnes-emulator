@@ -1,15 +1,15 @@
-use crate::cartridge::cartridge::CartridgeData;
-use crate::cartridge::common::enums::Mirroring;
-use crate::cartridge::file_loader::read_banks;
-use crate::cartridge::file_loader::{
-    FileLoadable, NesRomReadError, CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES, PRG_UNIT_SIZE,
-};
+use crate::cartridge::common::enums::mirroring::Mirroring;
+use crate::cartridge::common::traits::cartridge_data::CartridgeData;
+use crate::cartridge::common::traits::file_loadable::FileLoadable;
+use crate::cartridge::common::utils::file::read_banks;
 use crate::cartridge::registers::chr_rom::ChrRom;
 use crate::cartridge::registers::prg_rom::PrgRom;
 use std::fs::File;
 use std::io::{BufReader, Read};
 use std::path::Path;
 
+use crate::cartridge::common::consts::{CHR_UNIT_SIZE, NES_FILE_MAGIC_BYTES, PRG_UNIT_SIZE};
+use crate::cartridge::common::enums::errors::NesRomReadError;
 use std::fmt::Debug;
 
 // Bytes 	Description
@@ -188,13 +188,16 @@ impl CartridgeData for Ines {
     }
 
     fn chr_rom(&self) -> &ChrRom {
-        self.chr_rom.as_ref().unwrap()
+        match self.chr_rom.as_ref() {
+            Some(x) => x,
+            None => panic!("CHR ROM is not present"),
+        }
     }
 }
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cartridge::formats::i_nes::FileLoadable;
+    use crate::cartridge::common::traits::file_loadable::FileLoadable;
     use std::io::Cursor;
 
     #[test]

@@ -1,27 +1,4 @@
 use std::io::Read;
-use std::path::Path;
-
-pub const NES_FILE_MAGIC_BYTES: [u8; 4] = ['N' as u8, 'E' as u8, 'S' as u8, 0x1A];
-pub const PRG_UNIT_SIZE: u16 = 16;
-pub const CHR_UNIT_SIZE: u16 = 8;
-
-#[derive(thiserror::Error, Debug)]
-pub enum NesRomReadError {
-    #[error("file format not supported")]
-    FileFormatNotSupported,
-
-    #[error("missing magic bytes")]
-    MissingMagicBytes,
-
-    #[error("missing prg rom")]
-    MissingPrgRom,
-}
-
-pub trait FileLoadable {
-    fn from_file<P: AsRef<Path>>(path: P) -> anyhow::Result<Self>
-    where
-        Self: Sized;
-}
 
 pub fn read_banks<R: Read>(
     file: &mut R,
@@ -39,8 +16,7 @@ pub fn read_banks<R: Read>(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
+    use crate::cartridge::common::utils::file::read_banks;
     #[test]
     fn test_read_banks_2_4() {
         let data = vec![1, 2, 3, 4, 5, 6, 7, 8];
