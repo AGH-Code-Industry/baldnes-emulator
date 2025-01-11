@@ -9,7 +9,7 @@ pub struct Registers {
     pub y: u8,
     pub a: u8,
     program_counter: u16,
-    stack_ptr: u8,
+    pub stack_ptr: u8,
     status: u8,
     operation: u8,
     adl: u8,
@@ -159,9 +159,19 @@ impl Registers {
         bus.write(self.adl as u16, self.memory_buffer);
     }
 
+    pub fn write_zero_page_bal_x<T: BusLike>(&mut self, bus: &mut T) {
+        let address = (self.bal + self.x) as usize;
+        bus.write(address as u16, self.memory_buffer);
+    }
+
+    pub fn write_zero_page_bal_y<T: BusLike>(&mut self, bus: &mut T) {
+        let address = (self.bal + self.y) as usize;
+        bus.write(address as u16, self.memory_buffer);
+    }
+
     pub fn write_absolute<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.adh as u16) << 8 | self.adl as u16;
-        bus.write(address as u16, self.memory_buffer);
+        bus.write(address, self.memory_buffer);
     }
 
     pub fn read_zero_page_bal_x<T: BusLike>(&mut self, bus: &mut T) {
@@ -174,11 +184,6 @@ impl Registers {
     pub fn read_zero_page_bal_y<T: BusLike>(&mut self, bus: &mut T) {
         let address = (self.bal + self.y) as usize;
         self.memory_buffer = bus.read(address as u16);
-    }
-
-    pub fn write_zero_page_bal_x<T: BusLike>(&mut self, bus: &mut T) {
-        let address = (self.bal + self.x) as usize;
-        bus.write(address as u16, self.memory_buffer);
     }
 
     pub fn read_adl_adh_absolute_index_register<T: BusLike>(
@@ -317,8 +322,78 @@ impl Registers {
         self.set_flag_value(CPUFlag::Negative, is_negative);
     }
 
+    pub fn store_accumulator(&mut self) {
+        self.memory_buffer = self.a;
+    }
+
+    pub fn store_x(&mut self) {
+        self.memory_buffer = self.x;
+    }
+
+    pub fn store_y(&mut self) {
+        self.memory_buffer = self.y;
+    }
+
+    pub fn transfer_acc_to_x(&mut self) {
+        self.x = self.a;
+        let is_zero = self.x == 0;
+        let is_negative = self.x & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    pub fn transfer_acc_to_y(&mut self) {
+        self.y = self.a;
+        let is_zero = self.y == 0;
+        let is_negative = self.y & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    pub fn transer_stackptr_to_x(&mut self) {
+        self.x = self.stack_ptr;
+        let is_zero = self.x == 0;
+        let is_negative = self.x & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    pub fn transfer_x_to_acc(&mut self) {
+        self.a = self.x;
+        let is_zero = self.a == 0;
+        let is_negative = self.a & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    pub fn transfer_x_to_stackptr(&mut self) {
+        self.stack_ptr = self.x;
+    }
+
+    pub fn transfer_y_to_acc(&mut self) {
+        self.a = self.y;
+        let is_zero = self.a == 0;
+        let is_negative = self.a & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
     pub fn and(&mut self) {
         self.a = self.a & self.memory_buffer;
+        let is_zero = self.a == 0;
+        let is_negative = self.a & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    pub fn xor(&mut self) {
+        self.a = self.a ^ self.memory_buffer;
         let is_zero = self.a == 0;
         let is_negative = self.a & 0x80 != 0;
 

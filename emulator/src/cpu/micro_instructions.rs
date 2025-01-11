@@ -22,8 +22,9 @@ pub enum MicroInstruction {
     ReadBahIndirectIal,
 
     WriteZeroPage,
-    WriteAbsolute,
     WriteZeroPageBalX,
+    WriteZeroPageBalY,
+    WriteAbsolute,
 
     ShiftLeftAccumulator,
     ShiftLeftMemoryBuffer,
@@ -38,8 +39,18 @@ pub enum MicroInstruction {
     LoadAccumulator,
     LoadX,
     LoadY,
+    StoreAccumulator,
+    StoreX,
+    StoreY,
+    TransferAccumulatorToX,
+    TransferAccumulatorToY,
+    TransferStackptrToX,
+    TransferXToAccumulator,
+    TransferXToStackptr,
+    TransferYToAccumulator,
 
     And,
+    Xor,
 }
 
 pub struct MicroInstructionSequence {

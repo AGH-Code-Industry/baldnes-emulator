@@ -6,18 +6,21 @@ pub enum Operation {
     AslZeroPage,
     AslZeroPageX,
     AslAbsolute,
+
     IncMemZeroPage,
     IncMemZeroPageX,
     IncMemAbsolute,
     IncMemAbsoluteX,
     IncX,
     IncY,
+
     DecMemZeroPage,
     DecMemZeroPageX,
     DecMemAbsolute,
     DecMemAbsoluteX,
     DecX,
     DecY,
+
     LoadAccImm,
     LoadAccZeroPage,
     LoadAccZeroPageX,
@@ -36,6 +39,28 @@ pub enum Operation {
     LoadYZeroPageX,
     LoadYAbsolute,
     LoadYAbsoluteX,
+
+    StoreAccZeroPage,
+    StoreAccZeroPageX,
+    StoreAccAbsolute,
+    StoreAccAbsoluteX,
+    StoreAccAbsoluteY,
+    StoreAccIndirectX,
+    StoreAccIndirectY,
+    StoreXZeroPage,
+    StoreXZeroPageY,
+    StoreXAbsolute,
+    StoreYZeroPage,
+    StoreYZeroPageX,
+    StoreYAbsolute,
+
+    TransferAccToX,
+    TransferAccToY,
+    TransferStackptrToX,
+    TransferXToAcc,
+    TransferXToStackptr,
+    TransferYToAcc,
+
     AndImm,
     AndZeroPage,
     AndZeroPageX,
@@ -44,6 +69,15 @@ pub enum Operation {
     AndAbsoluteY,
     AndIndirectX,
     AndIndirectY,
+
+    XorImm,
+    XorZeroPage,
+    XorZeroPageX,
+    XorAbsolute,
+    XorAbsoluteX,
+    XorAbsoluteY,
+    XorIndirectX,
+    XorIndirectY,
 }
 
 pub struct OperationMicroInstructions {
@@ -296,6 +330,133 @@ impl Operation {
                 addressing_sequence: Some(absolute_x_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::LoadY]),
             },
+            Self::StoreAccZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreAccumulator,
+                    MicroInstruction::WriteZeroPage,
+                ]),
+            },
+            Self::StoreAccZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreAccumulator,
+                    MicroInstruction::WriteZeroPageBalX,
+                ]),
+            },
+            Self::StoreAccAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreAccumulator,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::StoreAccAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreAccumulator,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::StoreAccAbsoluteY => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreAccumulator,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::StoreAccIndirectX => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreAccumulator,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::StoreAccIndirectY => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreAccumulator,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::StoreXZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreX,
+                    MicroInstruction::WriteZeroPage,
+                ]),
+            },
+            Self::StoreXZeroPageY => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreX,
+                    MicroInstruction::WriteZeroPageBalY,
+                ]),
+            },
+            Self::StoreXAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreX,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::StoreYZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreY,
+                    MicroInstruction::WriteZeroPage,
+                ]),
+            },
+            Self::StoreYZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreY,
+                    MicroInstruction::WriteZeroPageBalX,
+                ]),
+            },
+            Self::StoreYAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::StoreY,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::TransferAccToX => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::TransferAccumulatorToX,
+                ]),
+            },
+            Self::TransferAccToY => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::TransferAccumulatorToY,
+                ]),
+            },
+            Self::TransferStackptrToX => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::TransferStackptrToX,
+                ]),
+            },
+            Self::TransferXToAcc => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::TransferXToAccumulator,
+                ]),
+            },
+            Self::TransferXToStackptr => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::TransferXToStackptr,
+                ]),
+            },
+            Self::TransferYToAcc => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::TransferYToAccumulator,
+                ]),
+            },
             Self::AndImm => OperationMicroInstructions {
                 addressing_sequence: Some(immediate_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::And]),
@@ -327,6 +488,38 @@ impl Operation {
             Self::AndIndirectY => OperationMicroInstructions {
                 addressing_sequence: Some(indirect_y_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::And]),
+            },
+            Self::XorImm => OperationMicroInstructions {
+                addressing_sequence: Some(immediate_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
+            },
+            Self::XorZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
+            },
+            Self::XorZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
+            },
+            Self::XorAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
+            },
+            Self::XorAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
+            },
+            Self::XorAbsoluteY => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
+            },
+            Self::XorIndirectX => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
+            },
+            Self::XorIndirectY => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
             },
         }
     }
@@ -367,6 +560,33 @@ impl Operation {
             Self::LoadYZeroPageX => 0xB4,
             Self::LoadYAbsolute => 0xAC,
             Self::LoadYAbsoluteX => 0xBC,
+            Self::StoreAccZeroPage => 0x85,
+            Self::StoreAccZeroPageX => 0x95,
+            Self::StoreAccAbsolute => 0x8D,
+            Self::StoreAccAbsoluteX => 0x9D,
+            Self::StoreAccAbsoluteY => 0x99,
+            Self::StoreAccIndirectX => 0x81,
+            Self::StoreAccIndirectY => 0x91,
+            Self::StoreXZeroPage => 0x86,
+            Self::StoreXZeroPageY => 0x96,
+            Self::StoreXAbsolute => 0x8E,
+            Self::StoreYZeroPage => 0x84,
+            Self::StoreYZeroPageX => 0x94,
+            Self::StoreYAbsolute => 0x8C,
+            Self::TransferAccToX => 0xAA,
+            Self::TransferAccToY => 0xA8,
+            Self::TransferStackptrToX => 0xBA,
+            Self::TransferXToAcc => 0x8A,
+            Self::TransferXToStackptr => 0x9A,
+            Self::TransferYToAcc => 0x98,
+            Self::XorImm => 0x49,
+            Self::XorZeroPage => 0x45,
+            Self::XorZeroPageX => 0x55,
+            Self::XorAbsolute => 0x4D,
+            Self::XorAbsoluteX => 0x5D,
+            Self::XorAbsoluteY => 0x59,
+            Self::XorIndirectX => 0x41,
+            Self::XorIndirectY => 0x51,
             Self::AndImm => 0x29,
             Self::AndZeroPage => 0x25,
             Self::AndZeroPageX => 0x35,
@@ -414,6 +634,33 @@ impl Operation {
             0xB4 => Some(Self::LoadYZeroPageX),
             0xAC => Some(Self::LoadYAbsolute),
             0xBC => Some(Self::LoadYAbsoluteX),
+            0x85 => Some(Self::StoreAccZeroPage),
+            0x95 => Some(Self::StoreAccZeroPageX),
+            0x8D => Some(Self::StoreAccAbsolute),
+            0x9D => Some(Self::StoreAccAbsoluteX),
+            0x99 => Some(Self::StoreAccAbsoluteY),
+            0x81 => Some(Self::StoreAccIndirectX),
+            0x91 => Some(Self::StoreAccIndirectY),
+            0x86 => Some(Self::StoreXZeroPage),
+            0x96 => Some(Self::StoreXZeroPageY),
+            0x8E => Some(Self::StoreXAbsolute),
+            0x84 => Some(Self::StoreYZeroPage),
+            0x94 => Some(Self::StoreYZeroPageX),
+            0x8C => Some(Self::StoreYAbsolute),
+            0xAA => Some(Self::TransferAccToX),
+            0xA8 => Some(Self::TransferAccToY),
+            0xBA => Some(Self::TransferStackptrToX),
+            0x8A => Some(Self::TransferXToAcc),
+            0x9A => Some(Self::TransferXToStackptr),
+            0x98 => Some(Self::TransferYToAcc),
+            0x49 => Some(Self::XorImm),
+            0x45 => Some(Self::XorZeroPage),
+            0x55 => Some(Self::XorZeroPageX),
+            0x4D => Some(Self::XorAbsolute),
+            0x5D => Some(Self::XorAbsoluteX),
+            0x59 => Some(Self::XorAbsoluteY),
+            0x41 => Some(Self::XorIndirectX),
+            0x51 => Some(Self::XorIndirectY),
             0x29 => Some(Self::AndImm),
             0x25 => Some(Self::AndZeroPage),
             0x35 => Some(Self::AndZeroPageX),
