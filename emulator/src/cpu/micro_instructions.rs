@@ -26,8 +26,21 @@ pub enum MicroInstruction {
     WriteZeroPageBalY,
     WriteAbsolute,
 
+    ClearCarryFlag,
+    ClearDecimalFlag,
+    ClearInterruptDisableFlag,
+    ClearOverflowFlag,
+    SetCarryFlag,
+    SetDecimalFlag,
+    SetInterruptDisableFlag,
+
     ShiftLeftAccumulator,
     ShiftLeftMemoryBuffer,
+
+    PushAccumulator,
+    PushStatusRegister,
+    PullAccumulator,
+    PullStatusRegister,
 
     IncrementMemoryBuffer,
     IncrementX,
@@ -51,6 +64,7 @@ pub enum MicroInstruction {
 
     And,
     Xor,
+    Or,
 }
 
 pub struct MicroInstructionSequence {

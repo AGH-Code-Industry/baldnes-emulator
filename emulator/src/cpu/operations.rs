@@ -2,10 +2,23 @@ use crate::cpu::micro_instructions::{MicroInstruction, MicroInstructionSequence}
 
 #[derive(PartialEq, Debug)]
 pub enum Operation {
+    ClearCarryFlag,
+    ClearDecimalFlag,
+    ClearInterruptDisableFlag,
+    ClearOverflowFlag,
+    SetCarryFlag,
+    SetDecimalFlag,
+    SetInterruptDisableFlag,
+
     AslA,
     AslZeroPage,
     AslZeroPageX,
     AslAbsolute,
+
+    PushAcc,
+    PushStatus,
+    PullAcc,
+    PullStatus,
 
     IncMemZeroPage,
     IncMemZeroPageX,
@@ -78,6 +91,15 @@ pub enum Operation {
     XorAbsoluteY,
     XorIndirectX,
     XorIndirectY,
+
+    OrImm,
+    OrZeroPage,
+    OrZeroPageX,
+    OrAbsolute,
+    OrAbsoluteX,
+    OrAbsoluteY,
+    OrIndirectX,
+    OrIndirectY,
 }
 
 pub struct OperationMicroInstructions {
@@ -135,6 +157,48 @@ impl Operation {
             MicroInstructionSequence::new(vec![MicroInstruction::ImmediateRead]);
 
         match self {
+            Self::ClearCarryFlag => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ClearCarryFlag,
+                ]),
+            },
+            Self::ClearDecimalFlag => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ClearDecimalFlag,
+                ]),
+            },
+            Self::ClearInterruptDisableFlag => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ClearInterruptDisableFlag,
+                ]),
+            },
+            Self::ClearOverflowFlag => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ClearOverflowFlag,
+                ]),
+            },
+            Self::SetCarryFlag => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::SetCarryFlag,
+                ]),
+            },
+            Self::SetDecimalFlag => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::SetDecimalFlag,
+                ]),
+            },
+            Self::SetInterruptDisableFlag => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::SetInterruptDisableFlag,
+                ]),
+            },
             Self::AslA => OperationMicroInstructions {
                 addressing_sequence: None,
                 operation_sequence: MicroInstructionSequence::new(vec![
@@ -160,6 +224,30 @@ impl Operation {
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
                     MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::PushAcc => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::PushAccumulator,
+                ]),
+            },
+            Self::PushStatus => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::PushStatusRegister,
+                ]),
+            },
+            Self::PullAcc => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::PullAccumulator,
+                ]),
+            },
+            Self::PullStatus => OperationMicroInstructions {
+                addressing_sequence: None,
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::PullStatusRegister,
                 ]),
             },
             Self::IncMemZeroPage => OperationMicroInstructions {
@@ -521,15 +609,58 @@ impl Operation {
                 addressing_sequence: Some(indirect_y_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Xor]),
             },
+            Self::OrImm => OperationMicroInstructions {
+                addressing_sequence: Some(immediate_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
+            Self::OrZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
+            Self::OrZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
+            Self::OrAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
+            Self::OrAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
+            Self::OrAbsoluteY => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
+            Self::OrIndirectX => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
+            Self::OrIndirectY => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![MicroInstruction::Or]),
+            },
         }
     }
 
     pub fn get_opcode(&self) -> u8 {
         match self {
+            Self::ClearCarryFlag => 0x18,
+            Self::ClearDecimalFlag => 0xD8,
+            Self::ClearInterruptDisableFlag => 0x58,
+            Self::ClearOverflowFlag => 0xB8,
+            Self::SetCarryFlag => 0x38,
+            Self::SetDecimalFlag => 0xF8,
+            Self::SetInterruptDisableFlag => 0x78,
             Self::AslA => 0x0A,
             Self::AslZeroPage => 0x06,
             Self::AslZeroPageX => 0x16,
             Self::AslAbsolute => 0x0E,
+            Self::PushAcc => 0x48,
+            Self::PushStatus => 0x08,
+            Self::PullAcc => 0x68,
+            Self::PullStatus => 0x28,
             Self::IncMemZeroPage => 0xE6,
             Self::IncMemZeroPageX => 0xF6,
             Self::IncMemAbsolute => 0xEE,
@@ -579,14 +710,6 @@ impl Operation {
             Self::TransferXToAcc => 0x8A,
             Self::TransferXToStackptr => 0x9A,
             Self::TransferYToAcc => 0x98,
-            Self::XorImm => 0x49,
-            Self::XorZeroPage => 0x45,
-            Self::XorZeroPageX => 0x55,
-            Self::XorAbsolute => 0x4D,
-            Self::XorAbsoluteX => 0x5D,
-            Self::XorAbsoluteY => 0x59,
-            Self::XorIndirectX => 0x41,
-            Self::XorIndirectY => 0x51,
             Self::AndImm => 0x29,
             Self::AndZeroPage => 0x25,
             Self::AndZeroPageX => 0x35,
@@ -595,15 +718,42 @@ impl Operation {
             Self::AndAbsoluteY => 0x39,
             Self::AndIndirectX => 0x21,
             Self::AndIndirectY => 0x31,
+            Self::XorImm => 0x49,
+            Self::XorZeroPage => 0x45,
+            Self::XorZeroPageX => 0x55,
+            Self::XorAbsolute => 0x4D,
+            Self::XorAbsoluteX => 0x5D,
+            Self::XorAbsoluteY => 0x59,
+            Self::XorIndirectX => 0x41,
+            Self::XorIndirectY => 0x51,
+            Self::OrImm => 0x09,
+            Self::OrZeroPage => 0x05,
+            Self::OrZeroPageX => 0x15,
+            Self::OrAbsolute => 0x0D,
+            Self::OrAbsoluteX => 0x1D,
+            Self::OrAbsoluteY => 0x19,
+            Self::OrIndirectX => 0x01,
+            Self::OrIndirectY => 0x11,
         }
     }
 
     pub fn get_operation(opcode: u8) -> Option<Self> {
         match opcode {
+            0x18 => Some(Self::ClearCarryFlag),
+            0xD8 => Some(Self::ClearDecimalFlag),
+            0x58 => Some(Self::ClearInterruptDisableFlag),
+            0xB8 => Some(Self::ClearOverflowFlag),
+            0x38 => Some(Self::SetCarryFlag),
+            0xF8 => Some(Self::SetDecimalFlag),
+            0x78 => Some(Self::SetInterruptDisableFlag),
             0x0A => Some(Self::AslA),
             0x06 => Some(Self::AslZeroPage),
             0x16 => Some(Self::AslZeroPageX),
             0x0E => Some(Self::AslAbsolute),
+            0x48 => Some(Self::PushAcc),
+            0x08 => Some(Self::PushStatus),
+            0x68 => Some(Self::PullAcc),
+            0x28 => Some(Self::PullStatus),
             0xE6 => Some(Self::IncMemZeroPage),
             0xF6 => Some(Self::IncMemZeroPageX),
             0xEE => Some(Self::IncMemAbsolute),
@@ -653,14 +803,6 @@ impl Operation {
             0x8A => Some(Self::TransferXToAcc),
             0x9A => Some(Self::TransferXToStackptr),
             0x98 => Some(Self::TransferYToAcc),
-            0x49 => Some(Self::XorImm),
-            0x45 => Some(Self::XorZeroPage),
-            0x55 => Some(Self::XorZeroPageX),
-            0x4D => Some(Self::XorAbsolute),
-            0x5D => Some(Self::XorAbsoluteX),
-            0x59 => Some(Self::XorAbsoluteY),
-            0x41 => Some(Self::XorIndirectX),
-            0x51 => Some(Self::XorIndirectY),
             0x29 => Some(Self::AndImm),
             0x25 => Some(Self::AndZeroPage),
             0x35 => Some(Self::AndZeroPageX),
@@ -669,6 +811,22 @@ impl Operation {
             0x39 => Some(Self::AndAbsoluteY),
             0x21 => Some(Self::AndIndirectX),
             0x31 => Some(Self::AndIndirectY),
+            0x49 => Some(Self::XorImm),
+            0x45 => Some(Self::XorZeroPage),
+            0x55 => Some(Self::XorZeroPageX),
+            0x4D => Some(Self::XorAbsolute),
+            0x5D => Some(Self::XorAbsoluteX),
+            0x59 => Some(Self::XorAbsoluteY),
+            0x41 => Some(Self::XorIndirectX),
+            0x51 => Some(Self::XorIndirectY),
+            0x09 => Some(Self::OrImm),
+            0x05 => Some(Self::OrZeroPage),
+            0x15 => Some(Self::OrZeroPageX),
+            0x0D => Some(Self::OrAbsolute),
+            0x1D => Some(Self::OrAbsoluteX),
+            0x19 => Some(Self::OrAbsoluteY),
+            0x01 => Some(Self::OrIndirectX),
+            0x11 => Some(Self::OrIndirectY),
             _ => None,
         }
     }

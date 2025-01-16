@@ -10,7 +10,7 @@ pub struct Registers {
     pub a: u8,
     program_counter: u16,
     pub stack_ptr: u8,
-    status: u8,
+    pub status: u8,
     operation: u8,
     adl: u8,
     adh: u8,
@@ -29,7 +29,7 @@ impl Registers {
             y: 0x00,
             a: 0x00,
             program_counter: 0x0000,
-            stack_ptr: 0x00,
+            stack_ptr: 0xFF,
             status: 0x00,
             operation: 0x00,
             adl: 0x00,
@@ -241,6 +241,32 @@ impl Registers {
         self.set_flag_value(CPUFlag::Negative, is_negative);
     }
 
+    pub fn push_accumulator<T: BusLike>(&mut self, bus: &mut T) {
+        let address: u16 = self.stack_ptr as u16 | 0x0100;
+        bus.write(address, self.a);
+        self.stack_ptr -= 1;
+    }
+
+    pub fn push_status_register<T: BusLike>(&mut self, bus: &mut T) {
+        let address: u16 = self.stack_ptr as u16 | 0x0100;
+        let status: u8 = self.status | 0b0011_0000; // push with B and U flag set to 1
+        bus.write(address, status);
+        self.stack_ptr -= 1;
+    }
+
+    pub fn pull_accumulator<T: BusLike>(&mut self, bus: &mut T) {
+        self.stack_ptr += 1;
+        let address: u16 = self.stack_ptr as u16 | 0x0100;
+        self.a = bus.read(address);
+    }
+
+    pub fn pull_status_register<T: BusLike>(&mut self, bus: &mut T) {
+        self.stack_ptr += 1;
+        let address: u16 = self.stack_ptr as u16 | 0x0100;
+        let status: u8 = bus.read(address);
+        self.status = status & 0b1100_1111; // ignoring B and U flag
+    }
+
     pub fn increment_memory_buffer(&mut self) {
         self.memory_buffer = self.memory_buffer.wrapping_add(1u8);
         let is_zero = self.memory_buffer == 0;
@@ -394,6 +420,15 @@ impl Registers {
 
     pub fn xor(&mut self) {
         self.a = self.a ^ self.memory_buffer;
+        let is_zero = self.a == 0;
+        let is_negative = self.a & 0x80 != 0;
+
+        self.set_flag_value(CPUFlag::Zero, is_zero);
+        self.set_flag_value(CPUFlag::Negative, is_negative);
+    }
+
+    pub fn or(&mut self) {
+        self.a = self.a | self.memory_buffer;
         let is_zero = self.a == 0;
         let is_negative = self.a & 0x80 != 0;
 
