@@ -22,11 +22,25 @@ pub enum MicroInstruction {
     ReadBahIndirectIal,
 
     WriteZeroPage,
-    WriteAbsolute,
     WriteZeroPageBalX,
+    WriteZeroPageBalY,
+    WriteAbsolute,
+
+    ClearCarryFlag,
+    ClearDecimalFlag,
+    ClearInterruptDisableFlag,
+    ClearOverflowFlag,
+    SetCarryFlag,
+    SetDecimalFlag,
+    SetInterruptDisableFlag,
 
     ShiftLeftAccumulator,
     ShiftLeftMemoryBuffer,
+
+    PushAccumulator,
+    PushStatusRegister,
+    PullAccumulator,
+    PullStatusRegister,
 
     IncrementMemoryBuffer,
     IncrementX,
@@ -38,8 +52,19 @@ pub enum MicroInstruction {
     LoadAccumulator,
     LoadX,
     LoadY,
+    StoreAccumulator,
+    StoreX,
+    StoreY,
+    TransferAccumulatorToX,
+    TransferAccumulatorToY,
+    TransferStackptrToX,
+    TransferXToAccumulator,
+    TransferXToStackptr,
+    TransferYToAccumulator,
 
     And,
+    Xor,
+    Or,
 }
 
 pub struct MicroInstructionSequence {

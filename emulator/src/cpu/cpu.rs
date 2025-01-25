@@ -131,12 +131,34 @@ impl<T: BusLike> CPU<T> {
                 self.registers.read_bah_indirect_ial(&mut self.bus)
             }
             MicroInstruction::WriteZeroPage => self.registers.write_zero_page(&mut self.bus),
-            MicroInstruction::WriteAbsolute => self.registers.write_absolute(&mut self.bus),
             MicroInstruction::WriteZeroPageBalX => {
                 self.registers.write_zero_page_bal_x(&mut self.bus)
             }
+            MicroInstruction::WriteZeroPageBalY => {
+                self.registers.write_zero_page_bal_y(&mut self.bus);
+            }
+            MicroInstruction::WriteAbsolute => self.registers.write_absolute(&mut self.bus),
+            MicroInstruction::ClearCarryFlag => self.registers.clear_flag(CPUFlag::CarryBit),
+            MicroInstruction::ClearDecimalFlag => self.registers.clear_flag(CPUFlag::DecimalMode),
+            MicroInstruction::ClearInterruptDisableFlag => {
+                self.registers.clear_flag(CPUFlag::InterruptDisable)
+            }
+            MicroInstruction::ClearOverflowFlag => self.registers.clear_flag(CPUFlag::Overflow),
+            MicroInstruction::SetCarryFlag => self.registers.set_flag(CPUFlag::CarryBit),
+            MicroInstruction::SetDecimalFlag => self.registers.set_flag(CPUFlag::DecimalMode),
+            MicroInstruction::SetInterruptDisableFlag => {
+                self.registers.set_flag(CPUFlag::InterruptDisable)
+            }
             MicroInstruction::ShiftLeftAccumulator => self.registers.shift_left_accumulator(),
             MicroInstruction::ShiftLeftMemoryBuffer => self.registers.shift_left_memory_buffer(),
+            MicroInstruction::PushAccumulator => self.registers.push_accumulator(&mut self.bus),
+            MicroInstruction::PushStatusRegister => {
+                self.registers.push_status_register(&mut self.bus)
+            }
+            MicroInstruction::PullAccumulator => self.registers.pull_accumulator(&mut self.bus),
+            MicroInstruction::PullStatusRegister => {
+                self.registers.pull_status_register(&mut self.bus)
+            }
             MicroInstruction::IncrementMemoryBuffer => self.registers.increment_memory_buffer(),
             MicroInstruction::IncrementX => self.registers.increment_x(),
             MicroInstruction::IncrementY => self.registers.increment_y(),
@@ -146,7 +168,18 @@ impl<T: BusLike> CPU<T> {
             MicroInstruction::LoadAccumulator => self.registers.load_accumulator(),
             MicroInstruction::LoadX => self.registers.load_x(),
             MicroInstruction::LoadY => self.registers.load_y(),
+            MicroInstruction::StoreAccumulator => self.registers.store_accumulator(),
+            MicroInstruction::StoreX => self.registers.store_x(),
+            MicroInstruction::StoreY => self.registers.store_y(),
+            MicroInstruction::TransferAccumulatorToX => self.registers.transfer_acc_to_x(),
+            MicroInstruction::TransferAccumulatorToY => self.registers.transfer_acc_to_y(),
+            MicroInstruction::TransferStackptrToX => self.registers.transer_stackptr_to_x(),
+            MicroInstruction::TransferXToAccumulator => self.registers.transfer_x_to_acc(),
+            MicroInstruction::TransferXToStackptr => self.registers.transfer_x_to_stackptr(),
+            MicroInstruction::TransferYToAccumulator => self.registers.transfer_y_to_acc(),
             MicroInstruction::And => self.registers.and(),
+            MicroInstruction::Xor => self.registers.xor(),
+            MicroInstruction::Or => self.registers.or(),
         }
     }
 }
@@ -169,7 +202,6 @@ impl CPUFlag {
 #[cfg(test)]
 mod tests {
     use crate::cpu::operations::Operation;
-    use std::collections::btree_map::Values;
 
     use crate::bus;
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -465,6 +497,167 @@ mod tests {
     }
 
     #[test]
+    fn test_cpu_clear_carry_flag() {
+        let opcode = Operation::ClearCarryFlag.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.set_flag(CPUFlag::CarryBit);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ClearCarryFlag)
+        );
+
+        assert_eq!(cpu.registers.is_flag_set(CPUFlag::CarryBit), false);
+    }
+
+    #[test]
+    fn test_cpu_clear_decimal_flag() {
+        let opcode = Operation::ClearDecimalFlag.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.set_flag(CPUFlag::DecimalMode);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ClearDecimalFlag)
+        );
+
+        assert_eq!(cpu.registers.is_flag_set(CPUFlag::DecimalMode), false);
+    }
+
+    #[test]
+    fn test_cpu_clear_interrupt_disable_flag() {
+        let opcode = Operation::ClearInterruptDisableFlag.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.set_flag(CPUFlag::InterruptDisable);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ClearInterruptDisableFlag)
+        );
+
+        assert_eq!(cpu.registers.is_flag_set(CPUFlag::InterruptDisable), false);
+    }
+
+    #[test]
+    fn test_cpu_clear_overflow_flag() {
+        let opcode = Operation::ClearOverflowFlag.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.set_flag(CPUFlag::Overflow);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::ClearOverflowFlag)
+        );
+
+        assert_eq!(cpu.registers.is_flag_set(CPUFlag::Overflow), false);
+    }
+
+    #[test]
+    fn test_cpu_set_carry_flag() {
+        let opcode = Operation::SetCarryFlag.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.clear_flag(CPUFlag::CarryBit);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::SetCarryFlag)
+        );
+
+        assert_eq!(cpu.registers.is_flag_set(CPUFlag::CarryBit), true);
+    }
+
+    #[test]
+    fn test_cpu_set_decimal_flag() {
+        let opcode = Operation::SetDecimalFlag.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.clear_flag(CPUFlag::DecimalMode);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::SetDecimalFlag)
+        );
+
+        assert_eq!(cpu.registers.is_flag_set(CPUFlag::DecimalMode), true);
+    }
+
+    #[test]
+    fn test_cpu_set_interrupt_disable_flag() {
+        let opcode = Operation::SetInterruptDisableFlag.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.clear_flag(CPUFlag::InterruptDisable);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::SetInterruptDisableFlag)
+        );
+
+        assert_eq!(cpu.registers.is_flag_set(CPUFlag::InterruptDisable), true);
+    }
+
+    #[test]
     fn test_cpu_asl_a() {
         const OPCODE: u8 = 0x0A;
         let mut bus = TestBus::new();
@@ -542,6 +735,120 @@ mod tests {
         let read_value = cpu.bus.read(ADDRESS as u16);
 
         assert_eq!(read_value, EXPECTED_VALUE);
+    }
+
+    #[test]
+    fn test_cpu_push_acc() {
+        let opcode = Operation::PushAcc.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = 20;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        assert_eq!(cpu.registers.stack_ptr, 0xFF);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::PushAccumulator)
+        );
+
+        let stack_value: u8 = cpu.bus.read(0x01FF);
+        assert_eq!(stack_value, cpu.registers.a);
+        assert_eq!(cpu.registers.stack_ptr, 0xFF - 1);
+    }
+
+    #[test]
+    fn test_cpu_push_status() {
+        let opcode = Operation::PushStatus.get_opcode();
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        assert_eq!(cpu.registers.status, 0x00);
+        cpu.registers.set_flag(CPUFlag::Negative);
+        cpu.registers.set_flag(CPUFlag::CarryBit);
+        cpu.registers.set_flag(CPUFlag::Overflow);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        assert_eq!(cpu.registers.stack_ptr, 0xFF);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::PushStatusRegister)
+        );
+
+        let stack_value: u8 = cpu.bus.read(0x01FF);
+        assert_eq!(
+            stack_value,
+            cpu.registers.status | CPUFlag::Break.value() | CPUFlag::Unused.value()
+        );
+        assert_eq!(cpu.registers.stack_ptr, 0xFF - 1);
+    }
+
+    #[test]
+    fn test_cpu_pull_acc() {
+        let opcode = Operation::PullAcc.get_opcode();
+
+        let mut bus = TestBus::new();
+        let stack_value: u8 = 100;
+        bus.write(0x0000, opcode);
+        bus.write(0x01FF, stack_value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = 20;
+        cpu.registers.stack_ptr = 0xFF - 1;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::PullAccumulator)
+        );
+
+        assert_eq!(stack_value, cpu.registers.a);
+        assert_eq!(cpu.registers.stack_ptr, 0xFF);
+    }
+
+    #[test]
+    fn test_cpu_pull_status() {
+        let opcode = Operation::PullStatus.get_opcode();
+
+        let mut bus = TestBus::new();
+        let stack_status: u8 = 0b1011_1100;
+        bus.write(0x0000, opcode);
+        bus.write(0x01FF, stack_status);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.stack_ptr = 0xFF - 1;
+        assert_eq!(cpu.registers.status, 0x00);
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::PullStatusRegister)
+        );
+
+        assert_eq!(stack_status & 0b1100_1111, cpu.registers.status);
+        assert_eq!(cpu.registers.stack_ptr, 0xFF);
     }
 
     #[test]
@@ -1489,6 +1796,702 @@ mod tests {
     }
 
     #[test]
+    fn test_cpu_store_acc_zero_page() {
+        let opcode = Operation::StoreAccZeroPage.get_opcode();
+        let adl: u8 = 0xAA;
+        let acc_value: u8 = 3;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreAccumulator)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPage)
+        );
+
+        let value = cpu.bus.read(adl as u16);
+        assert_eq!(value, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_store_acc_zero_page_x() {
+        let opcode = Operation::StoreAccZeroPageX.get_opcode();
+        let adl: u8 = 0x0B;
+        let x_value: u8 = 30;
+        let acc_value: u8 = 100;
+        let expected_address: u16 = (adl + x_value) as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreAccumulator)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPageBalX)
+        );
+
+        let value = cpu.bus.read(expected_address);
+        assert_eq!(value, cpu.registers.a)
+    }
+
+    #[test]
+    fn test_cpu_store_acc_absolute() {
+        let opcode = Operation::StoreAccAbsolute.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let acc_value: u8 = 10;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreAccumulator)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        let value = cpu.bus.read(address);
+        assert_eq!(value, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_store_acc_absolute_x() {
+        let opcode = Operation::StoreAccAbsoluteX.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let acc_value: u8 = 10;
+        let x_value: u8 = 20;
+        let expected_address: u16 = address + x_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreAccumulator)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        let value = cpu.bus.read(expected_address);
+        assert_eq!(value, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_store_acc_absolute_y() {
+        let opcode = Operation::StoreAccAbsoluteY.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let acc_value: u8 = 10;
+        let y_value: u8 = 20;
+        let expected_address: u16 = address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreAccumulator)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        let value = cpu.bus.read(expected_address);
+        assert_eq!(value, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_store_acc_indirect_x() {
+        let opcode = Operation::StoreAccIndirectX.get_opcode();
+        let a_value: u8 = 5;
+        let x_value: u8 = 10;
+        let adl: u8 = 0xA0;
+        let expected_address: u16 = (adl + x_value) as u16;
+        let indirect_adl: u8 = 0x88;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAA88;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, indirect_adl);
+        bus.write(expected_address + 1, indirect_adh);
+        bus.write(indirect_address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreAccumulator)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        let value = cpu.bus.read(indirect_address);
+        assert_eq!(value, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_store_acc_indirect_y() {
+        let opcode = Operation::StoreAccIndirectY.get_opcode();
+        let acc_value: u8 = 13;
+        let y_value: u8 = 20;
+        let adl: u8 = 0x22;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+        let expected_address: u16 = indirect_address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, indirect_adl);
+        bus.write((adl + 1) as u16, indirect_adh);
+        bus.write(expected_address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreAccumulator)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        let value = cpu.bus.read(expected_address);
+        assert_eq!(value, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_store_x_zero_page() {
+        let opcode = Operation::StoreXZeroPage.get_opcode();
+        let adl: u8 = 0xAA;
+        let x_value: u8 = 5;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreX)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPage)
+        );
+
+        let value = cpu.bus.read(adl as u16);
+        assert_eq!(value, cpu.registers.x);
+    }
+
+    #[test]
+    fn test_cpu_store_x_zero_page_y() {
+        let opcode = Operation::StoreXZeroPageY.get_opcode();
+        let adl: u8 = 0x0B;
+        let x_value: u8 = 30;
+        let y_value: u8 = 10;
+        let expected_address: u16 = (adl + y_value) as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreX)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPageBalY)
+        );
+
+        let value = cpu.bus.read(expected_address);
+        assert_eq!(value, cpu.registers.x)
+    }
+
+    #[test]
+    fn test_cpu_store_x_absolute() {
+        let opcode = Operation::StoreXAbsolute.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let x_value: u8 = 10;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreX)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        let value = cpu.bus.read(address);
+        assert_eq!(value, cpu.registers.x);
+    }
+
+    #[test]
+    fn test_cpu_store_y_zero_page() {
+        let opcode = Operation::StoreYZeroPage.get_opcode();
+        let adl: u8 = 0xAA;
+        let y_value: u8 = 5;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreY)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPage)
+        );
+
+        let value = cpu.bus.read(adl as u16);
+        assert_eq!(value, cpu.registers.y);
+    }
+
+    #[test]
+    fn test_cpu_store_y_zero_page_x() {
+        let opcode = Operation::StoreYZeroPageX.get_opcode();
+        let adl: u8 = 0x0B;
+        let x_value: u8 = 30;
+        let y_value: u8 = 10;
+        let expected_address: u16 = (adl + x_value) as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.x = x_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreY)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteZeroPageBalX)
+        );
+
+        let value = cpu.bus.read(expected_address);
+        assert_eq!(value, cpu.registers.y)
+    }
+
+    #[test]
+    fn test_cpu_store_y_absolute() {
+        let opcode = Operation::StoreYAbsolute.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let y_value: u8 = 10;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(address, 0);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Execution);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::StoreY)
+        );
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::WriteAbsolute)
+        );
+
+        let value = cpu.bus.read(address);
+        assert_eq!(value, cpu.registers.y);
+    }
+
+    #[test]
+    fn test_cpu_transfer_acc_to_x() {
+        let opcode = Operation::TransferAccToX.get_opcode();
+        let acc_value: u8 = 10;
+        let x_value: u8 = 5;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::TransferAccumulatorToX)
+        );
+
+        assert_eq!(cpu.registers.x, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_transfer_acc_to_y() {
+        let opcode = Operation::TransferAccToY.get_opcode();
+        let acc_value: u8 = 10;
+        let y_value: u8 = 5;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::TransferAccumulatorToY)
+        );
+
+        assert_eq!(cpu.registers.y, cpu.registers.a);
+    }
+
+    #[test]
+    fn test_cpu_transfer_stackptr_to_x() {
+        let opcode = Operation::TransferStackptrToX.get_opcode();
+        let stack_ptr_value: u8 = 0xAB;
+        let x_value: u8 = 10;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.stack_ptr = stack_ptr_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::TransferStackptrToX)
+        );
+
+        assert_eq!(cpu.registers.x, cpu.registers.stack_ptr);
+    }
+
+    #[test]
+    fn test_cpu_transfer_x_to_acc() {
+        let opcode = Operation::TransferXToAcc.get_opcode();
+        let acc_value: u8 = 21;
+        let x_value: u8 = 10;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::TransferXToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, cpu.registers.x);
+    }
+
+    #[test]
+    fn test_cpu_transfer_x_to_stackptr() {
+        let opcode = Operation::TransferXToStackptr.get_opcode();
+        let stack_ptr_value: u8 = 0x12;
+        let x_value: u8 = 10;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.stack_ptr = stack_ptr_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::TransferXToStackptr)
+        );
+
+        assert_eq!(cpu.registers.stack_ptr, cpu.registers.x);
+    }
+
+    #[test]
+    fn test_cpu_transfer_y_to_acc() {
+        let opcode = Operation::TransferYToAcc.get_opcode();
+        let acc_value: u8 = 133;
+        let y_value: u8 = 10;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::TransferYToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, cpu.registers.y);
+    }
+
+    #[test]
     fn test_cpu_and_imm() {
         let opcode = Operation::AndImm.get_opcode();
         let value: u8 = 0b0000_1010;
@@ -1740,6 +2743,518 @@ mod tests {
 
         assert_eq!(cpu.state, CPUState::Fetching);
         assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::And));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_imm() {
+        let opcode = Operation::XorImm.get_opcode();
+        let value: u8 = 0b1010_1010;
+        let acc_value: u8 = 0b0101_1010;
+        let expected_value: u8 = 0b1111_0000;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_immediate_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_zero_page() {
+        let opcode = Operation::XorZeroPage.get_opcode();
+        let adl: u8 = 0xAA;
+        let value: u8 = 0b1010_1010;
+        let acc_value: u8 = 0b0101_1010;
+        let expected_value: u8 = 0b1111_0000;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_zero_page_x() {
+        let opcode = Operation::XorZeroPageX.get_opcode();
+        let adl: u8 = 0xAA;
+        let value: u8 = 0b1010_1010;
+        let acc_value: u8 = 0b0101_1010;
+        let x_value: u8 = 40;
+        let expected_address: u8 = adl + x_value;
+        let expected_value: u8 = 0b1111_0000;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address as u16, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_absolute() {
+        let opcode = Operation::XorAbsolute.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let expected_value: u8 = 0b1111_1001;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_absolute_x() {
+        let opcode = Operation::XorAbsoluteX.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let x_value: u8 = 2;
+        let expected_value: u8 = 0b1111_1001;
+        let expected_address: u16 = address + x_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_absolute_y() {
+        let opcode = Operation::XorAbsoluteY.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let y_value: u8 = 200;
+        let expected_value: u8 = 0b1111_1001;
+        let expected_address: u16 = address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_indirect_x() {
+        let opcode = Operation::XorIndirectX.get_opcode();
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let expected_value: u8 = 0b1111_1001;
+        let x_value: u8 = 10;
+        let adl: u8 = 0x22;
+        let expected_address: u16 = (adl + x_value) as u16;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, indirect_adl);
+        bus.write(expected_address + 1, indirect_adh);
+        bus.write(indirect_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_xor_indirect_y() {
+        let opcode = Operation::XorIndirectY.get_opcode();
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let expected_value: u8 = 0b1111_1001;
+        let y_value: u8 = 20;
+        let adl: u8 = 0x22;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+        let expected_address: u16 = indirect_address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, indirect_adl);
+        bus.write((adl + 1) as u16, indirect_adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Xor));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_imm() {
+        let opcode = Operation::OrImm.get_opcode();
+        let value: u8 = 0b1010_1010;
+        let acc_value: u8 = 0b0101_1010;
+        let expected_value: u8 = 0b1111_1010;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_immediate_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_zero_page() {
+        let opcode = Operation::OrZeroPage.get_opcode();
+        let adl: u8 = 0xAA;
+        let value: u8 = 0b1010_1010;
+        let acc_value: u8 = 0b0101_1010;
+        let expected_value: u8 = 0b1111_1010;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_zero_page_x() {
+        let opcode = Operation::OrZeroPageX.get_opcode();
+        let adl: u8 = 0xAA;
+        let value: u8 = 0b1010_1010;
+        let acc_value: u8 = 0b0101_1010;
+        let x_value: u8 = 40;
+        let expected_address: u8 = adl + x_value;
+        let expected_value: u8 = 0b1111_1010;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address as u16, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_absolute() {
+        let opcode = Operation::OrAbsolute.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let expected_value: u8 = 0b1111_1011;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_absolute_x() {
+        let opcode = Operation::OrAbsoluteX.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let x_value: u8 = 2;
+        let expected_value: u8 = 0b1111_1011;
+        let expected_address: u16 = address + x_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_absolute_y() {
+        let opcode = Operation::OrAbsoluteY.get_opcode();
+        let adl: u8 = 0xAA;
+        let adh: u8 = 0x11;
+        let address: u16 = 0x11AA;
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let y_value: u8 = 200;
+        let expected_value: u8 = 0b1111_1011;
+        let expected_address: u16 = address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(0x0002, adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_indirect_x() {
+        let opcode = Operation::OrIndirectX.get_opcode();
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let expected_value: u8 = 0b1111_1011;
+        let x_value: u8 = 10;
+        let adl: u8 = 0x22;
+        let expected_address: u16 = (adl + x_value) as u16;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(expected_address, indirect_adl);
+        bus.write(expected_address + 1, indirect_adh);
+        bus.write(indirect_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_or_indirect_y() {
+        let opcode = Operation::OrIndirectY.get_opcode();
+        let value: u8 = 0b0000_1010;
+        let a_value: u8 = 0b1111_0011;
+        let expected_value: u8 = 0b1111_1011;
+        let y_value: u8 = 20;
+        let adl: u8 = 0x22;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+        let expected_address: u16 = indirect_address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0x0000, opcode);
+        bus.write(0x0001, adl);
+        bus.write(adl as u16, indirect_adl);
+        bus.write((adl + 1) as u16, indirect_adh);
+        bus.write(expected_address, value);
+
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = a_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(cpu.current_micro_instruction, Some(MicroInstruction::Or));
 
         assert_eq!(cpu.registers.a, expected_value);
     }
