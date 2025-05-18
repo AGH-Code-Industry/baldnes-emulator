@@ -10,10 +10,20 @@ pub enum Operation {
     SetDecimalFlag,
     SetInterruptDisableFlag,
 
+    AddMemToAccImm,
+    AddMemToAccZeroPage,
+    AddMemToAccZeroPageX,
+    AddMemToAccAbsolute,
+    AddMemToAccAbsoluteX,
+    AddMemToAccAbsoluteY,
+    AddMemToAccIndirectX,
+    AddMemToAccIndirectY,
+
     AslA,
     AslZeroPage,
     AslZeroPageX,
     AslAbsolute,
+    AslAbsoluteX,
 
     PushAcc,
     PushStatus,
@@ -199,6 +209,54 @@ impl Operation {
                     MicroInstruction::SetInterruptDisableFlag,
                 ]),
             },
+            Self::AddMemToAccImm => OperationMicroInstructions {
+                addressing_sequence: Some(immediate_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
+            Self::AddMemToAccZeroPage => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
+            Self::AddMemToAccZeroPageX => OperationMicroInstructions {
+                addressing_sequence: Some(zero_page_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
+            Self::AddMemToAccAbsolute => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
+            Self::AddMemToAccAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
+            Self::AddMemToAccAbsoluteY => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
+            Self::AddMemToAccIndirectX => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_x_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
+            Self::AddMemToAccIndirectY => OperationMicroInstructions {
+                addressing_sequence: Some(indirect_y_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::AddMemoryToAccumulator,
+                ]),
+            },
             Self::AslA => OperationMicroInstructions {
                 addressing_sequence: None,
                 operation_sequence: MicroInstructionSequence::new(vec![
@@ -221,6 +279,13 @@ impl Operation {
             },
             Self::AslAbsolute => OperationMicroInstructions {
                 addressing_sequence: Some(absolute_addressing),
+                operation_sequence: MicroInstructionSequence::new(vec![
+                    MicroInstruction::ShiftLeftMemoryBuffer,
+                    MicroInstruction::WriteAbsolute,
+                ]),
+            },
+            Self::AslAbsoluteX => OperationMicroInstructions {
+                addressing_sequence: Some(absolute_x_addressing),
                 operation_sequence: MicroInstructionSequence::new(vec![
                     MicroInstruction::ShiftLeftMemoryBuffer,
                     MicroInstruction::WriteAbsolute,
@@ -653,10 +718,19 @@ impl Operation {
             Self::SetCarryFlag => 0x38,
             Self::SetDecimalFlag => 0xF8,
             Self::SetInterruptDisableFlag => 0x78,
+            Self::AddMemToAccImm => 0x69,
+            Self::AddMemToAccZeroPage => 0x65,
+            Self::AddMemToAccZeroPageX => 0x75,
+            Self::AddMemToAccAbsolute => 0x6D,
+            Self::AddMemToAccAbsoluteX => 0x7D,
+            Self::AddMemToAccAbsoluteY => 0x79,
+            Self::AddMemToAccIndirectX => 0x61,
+            Self::AddMemToAccIndirectY => 0x71,
             Self::AslA => 0x0A,
             Self::AslZeroPage => 0x06,
             Self::AslZeroPageX => 0x16,
             Self::AslAbsolute => 0x0E,
+            Self::AslAbsoluteX => 0x1E,
             Self::PushAcc => 0x48,
             Self::PushStatus => 0x08,
             Self::PullAcc => 0x68,
@@ -746,10 +820,19 @@ impl Operation {
             0x38 => Some(Self::SetCarryFlag),
             0xF8 => Some(Self::SetDecimalFlag),
             0x78 => Some(Self::SetInterruptDisableFlag),
+            0x69 => Some(Self::AddMemToAccImm),
+            0x65 => Some(Self::AddMemToAccZeroPage),
+            0x75 => Some(Self::AddMemToAccZeroPageX),
+            0x6D => Some(Self::AddMemToAccAbsolute),
+            0x7D => Some(Self::AddMemToAccAbsoluteX),
+            0x79 => Some(Self::AddMemToAccAbsoluteY),
+            0x61 => Some(Self::AddMemToAccIndirectX),
+            0x71 => Some(Self::AddMemToAccIndirectY),
             0x0A => Some(Self::AslA),
             0x06 => Some(Self::AslZeroPage),
             0x16 => Some(Self::AslZeroPageX),
             0x0E => Some(Self::AslAbsolute),
+            0x1E => Some(Self::AslAbsoluteX),
             0x48 => Some(Self::PushAcc),
             0x08 => Some(Self::PushStatus),
             0x68 => Some(Self::PullAcc),

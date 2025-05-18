@@ -149,6 +149,9 @@ impl<T: BusLike> CPU<T> {
             MicroInstruction::SetInterruptDisableFlag => {
                 self.registers.set_flag(CPUFlag::InterruptDisable)
             }
+            MicroInstruction::AddMemoryToAccumulator => {
+                self.registers.add_memory_with_carry_to_accumulator()
+            }
             MicroInstruction::ShiftLeftAccumulator => self.registers.shift_left_accumulator(),
             MicroInstruction::ShiftLeftMemoryBuffer => self.registers.shift_left_memory_buffer(),
             MicroInstruction::PushAccumulator => self.registers.push_accumulator(&mut self.bus),

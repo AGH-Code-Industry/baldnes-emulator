@@ -34,6 +34,8 @@ pub enum MicroInstruction {
     SetDecimalFlag,
     SetInterruptDisableFlag,
 
+    AddMemoryToAccumulator,
+
     ShiftLeftAccumulator,
     ShiftLeftMemoryBuffer,
 

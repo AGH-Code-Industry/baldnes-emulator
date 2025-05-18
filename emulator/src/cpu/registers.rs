@@ -221,6 +221,25 @@ impl Registers {
         self.bah = bus.read(self.ial as u16 + 1);
     }
 
+    pub fn add_memory_with_carry_to_accumulator(&mut self) {
+        let prev_carry: u8 = if self.is_flag_set(CPUFlag::CarryBit) {
+            1
+        } else {
+            0
+        };
+        let sum: u16 = self.a as u16 + self.memory_buffer as u16 + prev_carry as u16;
+        let result: u8 = sum as u8;
+        self.a = result;
+
+        self.set_flag_value(CPUFlag::CarryBit, sum > 0xFF);
+        self.set_flag_value(CPUFlag::Zero, result == 0);
+        self.set_flag_value(CPUFlag::Negative, result & 0x80 != 0);
+        self.set_flag_value(
+            CPUFlag::Overflow,
+            ((self.a ^ result) & (self.memory_buffer ^ result) & 0x80) != 0,
+        );
+    }
+
     pub fn shift_left_accumulator(&mut self) {
         let is_carry = self.a & 0x80 != 0;
         self.a <<= 1;
