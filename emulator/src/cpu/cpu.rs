@@ -204,6 +204,8 @@ impl CPUFlag {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::OpenOptions;
+
     use crate::cpu::operations::Operation;
 
     use crate::bus;
@@ -658,6 +660,278 @@ mod tests {
         );
 
         assert_eq!(cpu.registers.is_flag_set(CPUFlag::InterruptDisable), true);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_immediate() {
+        let opcode: u8 = Operation::AddMemToAccImm.get_opcode();
+        let value: u8 = 3;
+        let acc_value: u8 = 10;
+        let expected_value: u8 = value + acc_value;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_immediate_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_zero_page() {
+        let opcode: u8 = Operation::AddMemToAccZeroPage.get_opcode();
+        let value: u8 = 7;
+        let acc_value: u8 = 160;
+        let expected_value: u8 = value + acc_value;
+        let address: u8 = 0x2A;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, address);
+        bus.write(address as u16, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_zero_page_x() {
+        let opcode: u8 = Operation::AddMemToAccZeroPageX.get_opcode();
+        let value: u8 = 7;
+        let acc_value: u8 = 160;
+        let x_value: u8 = 10;
+        let expected_value: u8 = value + acc_value;
+        let address: u8 = 0x2A;
+        let expected_address: u8 = address + x_value;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, address);
+        bus.write(expected_address as u16, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_zero_page_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_absolute() {
+        let opcode: u8 = Operation::AddMemToAccAbsolute.get_opcode();
+        let value: u8 = 7;
+        let acc_value: u8 = 160;
+        let expected_value: u8 = value + acc_value;
+        let adl: u8 = 0x2A;
+        let adh: u8 = 0xBB;
+        let expected_address: u16 = 0xBB2A;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, adl);
+        bus.write(2, adh);
+        bus.write(expected_address, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_absolute_x() {
+        let opcode: u8 = Operation::AddMemToAccAbsoluteX.get_opcode();
+        let value: u8 = 7;
+        let acc_value: u8 = 160;
+        let x_value: u8 = 11;
+        let expected_value: u8 = value + acc_value;
+        let adl: u8 = 0x2A;
+        let adh: u8 = 0xBB;
+        let address: u16 = 0xBB2A;
+        let expected_address: u16 = address + x_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, adl);
+        bus.write(2, adh);
+        bus.write(expected_address, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_absolute_y() {
+        let opcode: u8 = Operation::AddMemToAccAbsoluteY.get_opcode();
+        let value: u8 = 7;
+        let acc_value: u8 = 160;
+        let y_value: u8 = 110;
+        let expected_value: u8 = value + acc_value;
+        let adl: u8 = 0x2A;
+        let adh: u8 = 0xBB;
+        let address: u16 = 0xBB2A;
+        let expected_address: u16 = address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, adl);
+        bus.write(2, adh);
+        bus.write(expected_address, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_absolute_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_indirect_x() {
+        let opcode = Operation::AddMemToAccIndirectX.get_opcode();
+        let value: u8 = 30;
+        let acc_value: u8 = 15;
+        let expected_value: u8 = value + acc_value;
+        let x_value: u8 = 10;
+        let adl: u8 = 0x80;
+        let expected_address: u16 = (adl + x_value) as u16;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, adl);
+        bus.write(expected_address, indirect_adl);
+        bus.write(expected_address + 1, indirect_adh);
+        bus.write(indirect_address, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.x = x_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_x_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
+    }
+
+    #[test]
+    fn test_cpu_add_mem_to_acc_indirect_y() {
+        let opcode: u8 = Operation::AddMemToAccIndirectY.get_opcode();
+        let value: u8 = 60;
+        let acc_value: u8 = 99;
+        let expected_value: u8 = value + acc_value;
+        let y_value: u8 = 20;
+        let adl: u8 = 0x80;
+        let indirect_adl: u8 = 0xBB;
+        let indirect_adh: u8 = 0xAA;
+        let indirect_address: u16 = 0xAABB;
+        let expected_address: u16 = indirect_address + y_value as u16;
+
+        let mut bus = TestBus::new();
+        bus.write(0, opcode);
+        bus.write(1, adl);
+        bus.write(adl as u16, indirect_adl);
+        bus.write((adl + 1) as u16, indirect_adh);
+        bus.write(expected_address, value);
+        let mut cpu = CPU::new(bus);
+        cpu.registers.a = acc_value;
+        cpu.registers.y = y_value;
+
+        _test_read_and_decode_operation(&mut cpu);
+
+        _test_indirect_y_read(&mut cpu);
+
+        cpu.step();
+
+        assert_eq!(cpu.state, CPUState::Fetching);
+        assert_eq!(
+            cpu.current_micro_instruction,
+            Some(MicroInstruction::AddMemoryToAccumulator)
+        );
+
+        assert_eq!(cpu.registers.a, expected_value);
     }
 
     #[test]
